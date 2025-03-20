@@ -1,0 +1,1398 @@
+.form-editor-main {
+  background: #3B2B6D;
+  border-radius: 1rem;
+  width: 95%;
+  max-width: 1400px;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.form-editor-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  backdrop-filter: blur(5px);
+}
+
+.form-editor-header {
+  display: none;
+}
+
+.form-editor-content {
+  display: flex;
+  position: relative;
+  min-height: 600px;
+  padding-top: 1rem;
+}
+
+.form-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-editor-header h1 {
+  font-size: 2.5rem;
+  color: #E9D8FD;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-elements-panel,
+.form-preview-panel {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.form-elements-panel {
+  border-right: none;
+}
+
+.form-preview-panel {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  overflow-x: auto;
+  max-height: 80vh;
+  position: relative;
+  white-space: nowrap;
+}
+
+.form-elements-panel h2,
+.form-preview-panel h2 {
+  color: #E9D8FD;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.75rem;
+}
+
+.empty-elements,
+.empty-preview {
+  text-align: center;
+  padding: 2rem;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 0.5rem;
+  font-style: italic;
+}
+
+.add-element-button {
+  background: #4FFFB0;
+  color: #3B2B6D;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 1.5rem;
+  width: 100%;
+}
+
+.add-element-button:hover {
+  background: #3ee69f;
+}
+
+.form-elements-list {
+  margin-bottom: 1.5rem;
+}
+
+.form-element-item {
+  background: rgba(233, 216, 253, 0.08);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid rgba(233, 216, 253, 0.15);
+}
+
+.element-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.element-type {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.element-required {
+  color: #4FFFB0;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.element-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.element-action-button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 0.25rem 0.5rem;
+}
+
+.element-action-button:hover {
+  opacity: 1;
+}
+
+.element-action-button.edit {
+  color: #4FFFB0;
+}
+
+.element-action-button.delete {
+  color: #ff4f4f;
+}
+
+.form-preview {
+  padding: 1rem 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: white;
+  min-width: 700px;
+  display: inline-block;
+}
+
+.form-preview h3 {
+  margin-top: 0;
+  margin-bottom: 2rem;
+  color: #3B2B6D;
+  font-size: 1.75rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 1rem;
+}
+
+.preview-elements {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.preview-element {
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.preview-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.preview-required {
+  color: #ff4f4f;
+  margin-left: 0.25rem;
+}
+
+.preview-input,
+.preview-textarea,
+.preview-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  background-color: #f9f9f9;
+  color: #666;
+}
+
+.preview-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.preview-checkbox-group,
+.preview-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.preview-checkbox-item,
+.preview-radio-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.preview-submit-button {
+  background: #4FFFB0;
+  color: #3B2B6D;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 2rem;
+  width: 100%;
+  max-width: 200px;
+}
+
+.element-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.element-form {
+  background: linear-gradient(135deg, #3B2B6D 0%, #241656 100%);
+  border-radius: 1rem;
+  padding: 2rem;
+  width: 90%;
+  max-width: 600px;
+  color: white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.element-form h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #E9D8FD;
+  font-size: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.75rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-group input[type="text"],
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0;
+}
+
+.options-group {
+  margin-bottom: 2rem;
+}
+
+.options-list {
+  margin-bottom: 1rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.option-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.remove-option-button {
+  background: none;
+  border: none;
+  color: #ff4f4f;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.add-option-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-option-container input {
+  flex: 1;
+}
+
+.add-option-button {
+  background: #4FFFB0;
+  color: #3B2B6D;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.element-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.cancel-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.75rem 1.5rem;
+  border-radius: 2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.save-button {
+  background: #4FFFB0;
+  color: #3B2B6D;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-button:hover {
+  background: #3ee69f;
+}
+
+.form-editor-actions {
+  display: none;
+}
+
+.form-editor-button {
+  background: #4FFFB0;
+  color: #3B2B6D;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-editor-button:hover {
+  background: #3ee69f;
+}
+
+.form-editor-button.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.form-editor-button.secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 768px) {
+  .form-editor-content {
+    flex-direction: column;
+  }
+  
+  .form-elements-panel,
+  .form-preview-panel {
+    max-height: none;
+    height: auto;
+  }
+  
+  .form-preview {
+    min-height: 500px;
+  }
+  
+  .element-form {
+    width: 95%;
+    padding: 1.5rem;
+  }
+}
+
+/* Add a page styling to make it look more like a PDF */
+.form-preview::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.05), transparent);
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+}
+
+/* Remove the divider between the two sections */
+.form-editor-content::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 1;
+  display: none; /* Hide the divider */
+}
+
+.generate-form-button {
+  background: #4FFFB0;
+  color: #3B2B6D;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 1.5rem;
+  width: 100%;
+}
+
+.generate-form-button:hover {
+  background: #3ee69f;
+}
+
+.form-placeholder {
+  text-align: center;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Add styles for the single panel layout */
+.form-editor-page {
+  padding: 6rem 2rem 2rem;
+  min-height: calc(100vh - 80px - 300px);
+  background: transparent;
+}
+
+.form-editor-single-panel {
+  background: #3B2B6D;
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.form-editor-content {
+  display: flex;
+  position: relative;
+  min-height: 600px;
+}
+
+/* Add a divider between the two sections */
+.form-editor-content::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 1;
+}
+
+.form-elements-panel,
+.form-preview-panel {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+.form-editor-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-editor-button {
+  background: #4FFFB0;
+  color: #3B2B6D;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-editor-button:hover {
+  background: #3ee69f;
+}
+
+.form-editor-button.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.form-editor-button.secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.form-preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+}
+
+.form-preview-container {
+  width: 100%;
+  height: 600px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: white;
+}
+
+.loading-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.form-content-container {
+  width: 100%;
+  min-height: 600px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  overflow: auto;
+  background: white;
+  padding: 2rem;
+  color: #333;
+}
+
+.form-content {
+  font-family: Arial, sans-serif;
+}
+
+.form-content h1, 
+.form-content h2, 
+.form-content h3 {
+  color: #3B2B6D;
+  margin-bottom: 1rem;
+}
+
+.form-content label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+}
+
+.form-content input,
+.form-content select,
+.form-content textarea {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+}
+
+.form-content button {
+  background: #4FFFB0;
+  color: #3B2B6D;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.form-content button:hover {
+  background: #3ee69f;
+}
+
+.no-content-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  font-style: italic;
+}
+
+.form-content-iframe {
+  width: 100%;
+  height: 600px;
+  border: none;
+  background: white;
+}
+
+/* Add styles for the form step-by-step interface */
+.form-step-container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.form-progress-bar {
+  height: 6px;
+  background-color: #e0e0e0;
+  border-radius: 3px;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
+.form-progress-indicator {
+  height: 100%;
+  background-color: #4FFFB0;
+  transition: width 0.3s ease;
+}
+
+.form-step-counter {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.form-step-content {
+  margin-bottom: 30px;
+}
+
+.form-navigation-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.form-nav-button {
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.prev-button {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #3B2B6D;
+  border: 1px solid #3B2B6D;
+}
+
+.prev-button:hover {
+  background-color: rgba(59, 43, 109, 0.1);
+}
+
+.next-button {
+  background-color: #3B2B6D;
+  color: white;
+}
+
+.next-button:hover {
+  background-color: #2a1f4f;
+}
+
+.submit-button {
+  background-color: #4FFFB0;
+  color: #3B2B6D;
+}
+
+.submit-button:hover {
+  background-color: #3ee69f;
+}
+
+.form-interactive-container {
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+/* Style form inputs within the step-by-step interface */
+.form-step-content input[type="text"],
+.form-step-content input[type="email"],
+.form-step-content input[type="date"],
+.form-step-content input[type="number"],
+.form-step-content select,
+.form-step-content textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.form-step-content label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-step-content input[type="radio"],
+.form-step-content input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.form-step-content .radio-group,
+.form-step-content .checkbox-group {
+  margin-bottom: 15px;
+}
+
+.form-step-content .radio-option,
+.form-step-content .checkbox-option {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* Add styles for the view toggle button */
+.view-toggle {
+  display: flex;
+  justify-content: center;
+}
+
+/* Make sure the form content container has proper scrolling */
+.form-content-container {
+  max-height: 700px;
+  overflow-y: auto;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+/* Add styles for form elements within the step-by-step view */
+.form-step-content div[data-field-id] {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.form-step-content p {
+  margin-bottom: 10px;
+  color: #666;
+}
+
+/* Style for required field indicators */
+.form-step-content .required-field {
+  color: #ff4f4f;
+  margin-left: 4px;
+}
+
+/* Add styles for the typeform-style interface */
+.form-step-content .form-step {
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Style for tooltips */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+}
+
+.tooltip .tooltip-text {
+  visibility: hidden;
+  width: 200px;
+  background-color: #3B2B6D;
+  color: white;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -100px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Style for prefilled fields */
+.prefilled-field {
+  background-color: rgba(79, 255, 176, 0.1) !important;
+  border: 1px solid rgba(79, 255, 176, 0.3) !important;
+}
+
+/* Style for the prefilled note */
+.prefilled-note {
+  background-color: rgba(59, 43, 109, 0.05);
+  border-left: 3px solid #4FFFB0;
+  padding: 10px 15px;
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 14px;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Add styles for the form submission loading state */
+.form-submission-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 8px;
+}
+
+.form-submission-loading p {
+  margin-top: 15px;
+  color: #3B2B6D;
+  font-weight: 600;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(59, 43, 109, 0.2);
+  border-top: 4px solid #4FFFB0;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Style for disabled buttons */
+.form-nav-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Add styles for form validation */
+.form-step-content input:invalid,
+.form-step-content select:invalid,
+.form-step-content textarea:invalid {
+  border-color: #ff4f4f;
+  background-color: rgba(255, 79, 79, 0.05);
+}
+
+.validation-error {
+  color: #ff4f4f;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Add styles for form success message */
+.form-success-message {
+  background-color: rgba(79, 255, 176, 0.1);
+  border: 1px solid rgba(79, 255, 176, 0.3);
+  color: #3B2B6D;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.form-success-message h3 {
+  color: #4FFFB0;
+  margin-bottom: 10px;
+}
+
+/* Simplified Form Editor styles */
+.form-editor-simplified {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+}
+
+.form-editor-simplified .form-content-container {
+  width: 100%;
+  height: 100%;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: white;
+}
+
+.form-editor-simplified .form-interactive-container {
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  border-radius: 0;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.form-editor-simplified .form-step-container {
+  background-color: white;
+  border-radius: 0;
+  padding: 20px;
+  box-shadow: none;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.form-editor-simplified .loading-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #333;
+  font-style: italic;
+}
+
+.form-editor-simplified .no-content-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #333;
+  font-style: italic;
+}
+
+/* Make sure form inputs are styled properly */
+.form-editor-simplified input,
+.form-editor-simplified select,
+.form-editor-simplified textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.form-editor-simplified label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Ensure the form takes up all available space */
+.form-editor-simplified .form-step-content {
+  min-height: calc(100vh - 200px);
+}
+
+/* Styles for direct HTML rendering */
+.direct-html-container {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: white;
+}
+
+.direct-html-content {
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+/* Override any styles that might cause the form to open in a new tab */
+.direct-html-content form {
+  display: block;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+/* Make sure scripts don't execute in a way that redirects */
+.direct-html-content script {
+  display: none;
+}
+
+/* Style form inputs within the direct HTML content */
+.direct-html-content input,
+.direct-html-content select,
+.direct-html-content textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.direct-html-content label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.direct-html-content button {
+  background-color: #3B2B6D;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.direct-html-content button:hover {
+  background-color: #2a1f4f;
+}
+
+/* Prevent form submission from navigating away */
+.direct-html-content form {
+  pointer-events: none;
+}
+
+.direct-html-content input,
+.direct-html-content select,
+.direct-html-content textarea,
+.direct-html-content button {
+  pointer-events: auto;
+}
+
+/* Add styles for the filled form view */
+.filled-form-view .form-editor-main {
+  background: #3B2B6D;
+  border-radius: 1rem;
+  width: 95%;
+  max-width: 1400px;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.form-editor-filled-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+}
+
+.form-editor-filled-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-editor-filled-header h2 {
+  color: #E9D8FD;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.form-editor-patient-info {
+  color: #4FFFB0;
+  font-size: 1rem;
+  background: rgba(79, 255, 176, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  border: 1px solid rgba(79, 255, 176, 0.2);
+}
+
+.form-preview-container {
+  flex: 1;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.form-preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+}
+
+.filled-form-view .form-editor-content {
+  flex: 1;
+  overflow: hidden;
+  padding: 0;
+}
+
+.filled-form-view .form-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Make sure the iframe takes up all available space */
+.filled-form-view .form-preview-container {
+  height: 100%;
+  min-height: 500px;
+}
+
+/* Responsive styles for filled form view */
+@media (max-width: 768px) {
+  .filled-form-view .form-editor-main {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+  }
+  
+  .form-editor-filled-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .form-editor-patient-info {
+    width: 100%;
+  }
+}
+
+/* Add styles for the iframe loading overlay */
+.iframe-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.iframe-loading-overlay p {
+  margin-top: 15px;
+  color: #3B2B6D;
+  font-weight: 600;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(59, 43, 109, 0.2);
+  border-top: 4px solid #4FFFB0;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Improve the filled form view */
+.form-preview-container {
+  position: relative;
+  flex: 1;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.form-preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+}
+
+/* Make sure the iframe takes up all available space */
+.filled-form-view .form-preview-container {
+  height: 100%;
+  min-height: 500px;
+}
+
+/* Add styles for the redirect overlay */
+.redirect-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  color: white;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.redirect-message {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #4FFFB0;
+}
+
+.redirect-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid #4FFFB0;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.redirect-details {
+  margin-top: 1rem;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 80%;
+  text-align: center;
+}
+
+/* Add styles for the embedded form editor */
+.form-editor-container-embedded {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.form-editor-container-embedded .form-editor-main {
+  background: #3B2B6D;
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 1400px;
+  height: calc(100vh - 120px); /* Adjust height to fit within the main content area */
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.form-editor-container-embedded .form-editor-content {
+  flex: 1;
+  overflow: hidden;
+  padding: 0;
+}
+
+.form-editor-container-embedded .form-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-editor-container-embedded.filled-form-view .form-preview-container {
+  height: 100%;
+  min-height: 400px;
+}
+
+/* Responsive styles for embedded form editor */
+@media (max-width: 768px) {
+  .form-editor-container-embedded .form-editor-main {
+    height: calc(100vh - 180px);
+  }
+  
+  .form-editor-container-embedded .form-editor-filled-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+/* Make sure the form editor header is visible in embedded mode */
+.form-editor-container-embedded .form-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-editor-container-embedded .form-editor-header h1 {
+  font-size: 1.5rem;
+  color: #E9D8FD;
+  margin: 0;
+} 
