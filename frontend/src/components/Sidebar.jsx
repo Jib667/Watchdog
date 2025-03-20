@@ -1,101 +1,69 @@
-import React from 'react';
+import { NavLink, Link } from 'react-router-dom';
 import './Sidebar.css';
-import conformLogo from '../assets/conform_logo.png';
-import { scrollToTop } from '../utils/scrollUtils';
+import { useEffect } from 'react';
 
-const Sidebar = ({ isOpen, onClose, user, onNavigate, handleDashboardClick }) => {
-  // Determine the current page based on URL
-  const currentPath = window.location.pathname;
-  
+const Sidebar = ({ isOpen, onClose }) => {
+  // Add logging to debug sidebar state
+  console.log("Sidebar render - isOpen:", isOpen);
+
+  // Add an effect to handle body scroll when sidebar is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isOpen]);
+
   return (
     <>
-      <div className={`sidebar-overlay ${isOpen ? 'active' : ''}`} onClick={onClose}></div>
+      {isOpen && <div className="sidebar-overlay" onClick={onClose}></div>}
       <div className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <div className="sidebar-logo">
-            <img src={conformLogo} alt="Conform.ai logo" className="sidebar-logo-image" />
-            <span className="sidebar-logo-text">Conform</span>
-          </div>
-          <button className="sidebar-close" onClick={onClose}>×</button>
+          <button className="close-button" onClick={onClose}>×</button>
+          <Link to="/" className="sidebar-logo-link" onClick={onClose}>
+            <div className="sidebar-logo-text">
+              <h2>Watchdog</h2>
+              <p>Congressional Monitoring</p>
+            </div>
+          </Link>
         </div>
-        
-        <div className="sidebar-content">
-          <h3 className="sidebar-title">Navigation</h3>
-          <ul className="sidebar-menu">
-            <li className="sidebar-menu-item">
-              <a 
-                href="/" 
-                className={currentPath === '/' ? 'active' : ''}
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigate('/');
-                  onClose();
-                }}
-              >
+        <nav className="sidebar-nav">
+          <ul>
+            <li>
+              <NavLink to="/" className={({ isActive }) => isActive ? 'active' : ''} onClick={onClose}>
                 Home
-              </a>
+              </NavLink>
             </li>
-            <li className="sidebar-menu-item">
-              <a 
-                href="/dashboard" 
-                className={currentPath === '/dashboard' ? 'active' : ''}
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (user) {
-                    onNavigate('/dashboard');
-                  } else {
-                    handleDashboardClick(e, 'dashboard');
-                  }
-                  onClose();
-                }}
-              >
-                Dashboard
-              </a>
+            <li>
+              <NavLink to="/representatives" className={({ isActive }) => isActive ? 'active' : ''} onClick={onClose}>
+                House of Representatives
+              </NavLink>
             </li>
-            <li className="sidebar-menu-item">
-              <a 
-                href="/form-editor" 
-                className={currentPath === '/form-editor' ? 'active' : ''}
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (user) {
-                    onNavigate('/form-editor');
-                  } else {
-                    handleDashboardClick(e, 'form editor');
-                  }
-                  onClose();
-                }}
-              >
-                Form Editor
-              </a>
+            <li>
+              <NavLink to="/senate" className={({ isActive }) => isActive ? 'active' : ''} onClick={onClose}>
+                Senate
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''} onClick={onClose}>
+                Contact
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/admin" className={({ isActive }) => isActive ? 'active' : ''} onClick={onClose}>
+                Admin
+              </NavLink>
             </li>
           </ul>
-          
-          <h3 className="sidebar-title" style={{ marginTop: '2rem' }}>More Information</h3>
-          <ul className="sidebar-menu">
-            <li className="sidebar-menu-item">
-              <a href="#">Features</a>
-            </li>
-            <li className="sidebar-menu-item">
-              <a href="#">Use Cases</a>
-            </li>
-            <li className="sidebar-menu-item">
-              <a href="#">Documentation</a>
-            </li>
-            <li className="sidebar-menu-item">
-              <a href="#">About Us</a>
-            </li>
-            <li className="sidebar-menu-item">
-              <a href="#">Contact</a>
-            </li>
-          </ul>
+        </nav>
+        <div className="sidebar-footer">
+          <p>© 2023 Watchdog</p>
         </div>
-        
-        {user && (
-          <div className="sidebar-footer">
-            <p>Logged in as: <strong>{user.name}</strong></p>
-          </div>
-        )}
       </div>
     </>
   );

@@ -1,0 +1,207 @@
+.admin-page {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.admin-page h1 {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  color: var(--primary-color);
+}
+
+.admin-section {
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.admin-section h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: var(--primary-color);
+  font-size: 1.5rem;
+}
+
+.admin-section h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  color: var(--text-color);
+}
+
+/* API Config Form */
+.api-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"] {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  font-size: 1rem;
+}
+
+.form-group.checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+
+.form-group.checkbox label {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-page button {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.admin-page button:hover {
+  background-color: var(--primary-dark);
+}
+
+.admin-page button:disabled {
+  background-color: var(--disabled-color);
+  cursor: not-allowed;
+}
+
+.admin-page button.primary-button {
+  background-color: var(--success-color);
+}
+
+.admin-page button.primary-button:hover {
+  background-color: var(--success-dark);
+}
+
+.admin-page button.warning-button {
+  background-color: var(--warning-color);
+}
+
+.admin-page button.warning-button:hover {
+  background-color: var(--warning-dark);
+}
+
+/* Sync Status */
+.sync-status {
+  margin-bottom: 2rem;
+}
+
+.sync-status table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.sync-status th,
+.sync-status td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sync-status th {
+  background-color: var(--secondary-bg);
+  font-weight: 600;
+}
+
+.sync-status tr:nth-child(even) {
+  background-color: var(--row-alternate);
+}
+
+.api-status {
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+.status-good {
+  color: var(--success-color);
+  margin-left: 0.5rem;
+}
+
+.status-bad {
+  color: var(--error-color);
+  margin-left: 0.5rem;
+}
+
+/* Sync Actions */
+.sync-actions {
+  margin-top: 1.5rem;
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.force-sync {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.helper-text {
+  font-size: 0.9rem;
+  color: var(--muted-text);
+  font-style: italic;
+}
+
+/* Sync Results */
+.sync-results {
+  background-color: var(--code-bg);
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  color: var(--code-text);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .button-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .button-group button {
+    width: 100%;
+  }
+  
+  .force-sync {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+} 

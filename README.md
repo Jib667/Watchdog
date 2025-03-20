@@ -7,11 +7,17 @@ A web application for monitoring representatives and senators of Congress
 - View platforms of representatives and senators easily
 - View voting records of representatives and senators
 - See contradictions and view past actions
+- Contact your representatives directly
 
 ## Project Structure
 
 - `frontend/`: React-based frontend application with Vite
+  - Components for each page (Home, Representatives, Senate, Contact)
+  - Sidebar navigation component
+  - CSS styling for all components
 - `backend/`: Python FastAPI backend with SQLite database
+  - User registration API
+  - Data retrieval endpoints for congressional information
 
 ## Pages
 
@@ -20,9 +26,9 @@ A web application for monitoring representatives and senators of Congress
 - **Senate**: Map and viewing system for members of the Senate
 - **Contact**: Contact the representative or senator of your choice
 
-### Manual Setup from GutHub
+## Setup Instructions
 
-#### Backend Setup
+### Backend Setup
 
 1. Navigate to the backend directory:
    ```bash
@@ -37,8 +43,7 @@ A web application for monitoring representatives and senators of Congress
 
 3. Install dependencies:
    ```bash
-   pip install uv
-   uv pip install -r requirements.txt
+   pip install -r requirements.txt
    ```
 
 4. Start the backend server:
@@ -48,7 +53,7 @@ A web application for monitoring representatives and senators of Congress
    
    The server will run on http://localhost:5000
 
-#### Frontend Setup
+### Frontend Setup
 
 1. Navigate to the frontend directory:
    ```bash
@@ -71,14 +76,6 @@ A web application for monitoring representatives and senators of Congress
 
 Both the frontend and backend servers need to be running simultaneously for the application to work properly. The frontend Vite server is configured to proxy API requests to the backend server.
 
-## Sign-Up Functionality
-
-The application includes a sign-up form that collects:
-- Full name
-- Email address
-
-This information is stored in an SQLite database on the backend.
-
 ## API Documentation
 
 When the backend server is running, you can access the automatically generated API documentation at:
@@ -87,9 +84,22 @@ When the backend server is running, you can access the automatically generated A
 
 ## Technologies Used
 
-- React.js
-- Vite
-- Python 3.8+
-- FastAPI
-- SQLite
-- UV (Python package installer) 
+- Frontend:
+  - React.js
+  - React Router
+  - Vite
+  - CSS3
+- Backend:
+  - Python 3.8+
+  - FastAPI
+  - SQLAlchemy
+  - SQLite
+  - Uvicorn
+
+## Future Enhancements
+
+- Implement interactive US maps for state selection
+- Add real-time data from Congress API
+- Add authentication for personalized experience
+- Add more detailed profiles for representatives and senators
+- Implement voting record comparison tools 

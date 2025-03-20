@@ -1,211 +1,257 @@
 import React, { useState } from 'react';
+import Modal from './Modal';
 import './SignUp.css';
-import hospitalSystems from '../data/hospitalSystems';
 
 const SignUp = ({ onClose }) => {
-  const healthcareTitles = [
-    'Physician',
-    'Nurse',
-    'Nurse Practitioner',
-    'Physician Assistant',
-    'Medical Assistant',
-    'Medical Technician',
-    'Healthcare Administrator',
-    'Medical Records Specialist',
-    'Other'
-  ];
-
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    healthcareTitle: '',
-    hospitalSystem: '',
-    customHealthcareTitle: '',
-    customHospitalSystem: ''
+    password: '',
+    confirmPassword: '',
+    state: '',
+    subscribeToCivicUpdates: true
   });
   
-  const [showCustomHealthcareTitle, setShowCustomHealthcareTitle] = useState(false);
-  const [showCustomHospitalSystem, setShowCustomHospitalSystem] = useState(false);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   
+  const states = [
+    { code: 'AL', name: 'Alabama' },
+    { code: 'AK', name: 'Alaska' },
+    { code: 'AZ', name: 'Arizona' },
+    { code: 'AR', name: 'Arkansas' },
+    { code: 'CA', name: 'California' },
+    { code: 'CO', name: 'Colorado' },
+    { code: 'CT', name: 'Connecticut' },
+    { code: 'DE', name: 'Delaware' },
+    { code: 'FL', name: 'Florida' },
+    { code: 'GA', name: 'Georgia' },
+    { code: 'HI', name: 'Hawaii' },
+    { code: 'ID', name: 'Idaho' },
+    { code: 'IL', name: 'Illinois' },
+    { code: 'IN', name: 'Indiana' },
+    { code: 'IA', name: 'Iowa' },
+    { code: 'KS', name: 'Kansas' },
+    { code: 'KY', name: 'Kentucky' },
+    { code: 'LA', name: 'Louisiana' },
+    { code: 'ME', name: 'Maine' },
+    { code: 'MD', name: 'Maryland' },
+    { code: 'MA', name: 'Massachusetts' },
+    { code: 'MI', name: 'Michigan' },
+    { code: 'MN', name: 'Minnesota' },
+    { code: 'MS', name: 'Mississippi' },
+    { code: 'MO', name: 'Missouri' },
+    { code: 'MT', name: 'Montana' },
+    { code: 'NE', name: 'Nebraska' },
+    { code: 'NV', name: 'Nevada' },
+    { code: 'NH', name: 'New Hampshire' },
+    { code: 'NJ', name: 'New Jersey' },
+    { code: 'NM', name: 'New Mexico' },
+    { code: 'NY', name: 'New York' },
+    { code: 'NC', name: 'North Carolina' },
+    { code: 'ND', name: 'North Dakota' },
+    { code: 'OH', name: 'Ohio' },
+    { code: 'OK', name: 'Oklahoma' },
+    { code: 'OR', name: 'Oregon' },
+    { code: 'PA', name: 'Pennsylvania' },
+    { code: 'RI', name: 'Rhode Island' },
+    { code: 'SC', name: 'South Carolina' },
+    { code: 'SD', name: 'South Dakota' },
+    { code: 'TN', name: 'Tennessee' },
+    { code: 'TX', name: 'Texas' },
+    { code: 'UT', name: 'Utah' },
+    { code: 'VT', name: 'Vermont' },
+    { code: 'VA', name: 'Virginia' },
+    { code: 'WA', name: 'Washington' },
+    { code: 'WV', name: 'West Virginia' },
+    { code: 'WI', name: 'Wisconsin' },
+    { code: 'WY', name: 'Wyoming' }
+  ];
+
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
     
-    if (name === 'healthcareTitle') {
-      setShowCustomHealthcareTitle(value === 'Other');
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    } else if (name === 'hospitalSystem') {
-      setShowCustomHospitalSystem(value === 'Other');
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-    
-    // Get final values based on custom fields
-    const finalData = {
-      name: formData.name,
-      email: formData.email,
-      healthcareTitle: formData.healthcareTitle === 'Other' ? formData.customHealthcareTitle : formData.healthcareTitle,
-      hospitalSystem: formData.hospitalSystem === 'Other' ? formData.customHospitalSystem : formData.hospitalSystem
-    };
-    
-    try {
-      const response = await fetch('http://localhost:6969/api/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(finalData)
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: ''
       });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.detail || 'Registration failed');
-      }
-      
-      setIsSuccess(true);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
     }
   };
-  
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    if (!formData.state) {
+      newErrors.state = 'Please select your state';
+    }
+    
+    return newErrors;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    const formErrors = validateForm();
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setSubmitSuccess(true);
+      
+      // Close modal after showing success message
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    }, 1500);
+  };
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h2>Sign Up for Conform</h2>
-          <button className="close-button" onClick={onClose}>×</button>
+    <Modal title="Join Watchdog" onClose={onClose}>
+      {submitSuccess ? (
+        <div className="success-message">
+          <div className="success-icon">✓</div>
+          <h3>Account Created!</h3>
+          <p>Welcome to the citizen oversight community.</p>
         </div>
-        
-        {!isSuccess ? (
-          <form onSubmit={handleSubmit}>
-            {error && <div className="error-message">{error}</div>}
-            
-            <div className="form-group">
-              <label htmlFor="name">Full Name</label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="healthcareTitle">Healthcare Title</label>
-              <select
-                id="healthcareTitle"
-                name="healthcareTitle"
-                value={formData.healthcareTitle}
-                onChange={handleChange}
-                required
-              >
-                <option value="" disabled>Select your healthcare title</option>
-                {healthcareTitles.map(title => (
-                  <option key={title} value={title}>{title}</option>
-                ))}
-              </select>
-              
-              {showCustomHealthcareTitle && (
-                <div className="form-group custom-input">
-                  <label htmlFor="customHealthcareTitle">Specify Healthcare Title</label>
-                  <input
-                    type="text"
-                    id="customHealthcareTitle"
-                    name="customHealthcareTitle"
-                    value={formData.customHealthcareTitle}
-                    onChange={handleChange}
-                    required={formData.healthcareTitle === 'Other'}
-                    placeholder="Enter your healthcare title"
-                  />
-                </div>
-              )}
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="hospitalSystem">Hospital System</label>
-              <select
-                id="hospitalSystem"
-                name="hospitalSystem"
-                value={formData.hospitalSystem}
-                onChange={handleChange}
-                required
-              >
-                <option value="" disabled>Select a hospital system</option>
-                {hospitalSystems.map(system => (
-                  <option key={system} value={system}>{system}</option>
-                ))}
-                <option value="Other">Other</option>
-              </select>
-              
-              {showCustomHospitalSystem && (
-                <div className="form-group custom-input">
-                  <label htmlFor="customHospitalSystem">Specify Hospital System</label>
-                  <input
-                    type="text"
-                    id="customHospitalSystem"
-                    name="customHospitalSystem"
-                    value={formData.customHospitalSystem}
-                    onChange={handleChange}
-                    required={formData.hospitalSystem === 'Other'}
-                    placeholder="Enter your hospital system"
-                  />
-                </div>
-              )}
-            </div>
-            
-            <div className="form-actions centered single-button">
-              <button 
-                type="submit" 
-                className="action-button submit-button"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Signing Up...' : 'Sign Up'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="success-message">
-            <h3>Registration Successful!</h3>
-            <p>Your account has been created. You can now log in.</p>
+      ) : (
+        <form onSubmit={handleSubmit} className="signup-form">
+          <div className="form-header">
+            <p>Join our community of citizens working to bring transparency to government.</p>
           </div>
-        )}
-      </div>
-    </div>
+          
+          <div className="form-group">
+            <label htmlFor="name">Full Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className={errors.name ? 'error' : ''}
+            />
+            {errors.name && <div className="error-message">{errors.name}</div>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className={errors.email ? 'error' : ''}
+            />
+            {errors.email && <div className="error-message">{errors.email}</div>}
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className={errors.password ? 'error' : ''}
+              />
+              {errors.password && <div className="error-message">{errors.password}</div>}
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className={errors.confirmPassword ? 'error' : ''}
+              />
+              {errors.confirmPassword && <div className="error-message">{errors.confirmPassword}</div>}
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="state">State</label>
+            <select
+              id="state"
+              name="state"
+              value={formData.state}
+              onChange={handleChange}
+              className={errors.state ? 'error' : ''}
+            >
+              <option value="">Select your state</option>
+              {states.map(state => (
+                <option key={state.code} value={state.code}>{state.name}</option>
+              ))}
+            </select>
+            {errors.state && <div className="error-message">{errors.state}</div>}
+          </div>
+          
+          <div className="form-group checkbox-group">
+            <input
+              type="checkbox"
+              id="subscribeToCivicUpdates"
+              name="subscribeToCivicUpdates"
+              checked={formData.subscribeToCivicUpdates}
+              onChange={handleChange}
+            />
+            <label htmlFor="subscribeToCivicUpdates">
+              Keep me updated on important civic oversight issues and platform updates
+            </label>
+          </div>
+          
+          <div className="form-actions">
+            <button type="button" className="cancel-button" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="submit-button" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating Account...' : 'Create Account'}
+            </button>
+          </div>
+          
+          <div className="form-footer">
+            <p>By signing up, you agree to our <a href="#terms">Terms of Service</a> and <a href="#privacy">Privacy Policy</a>.</p>
+            <p className="account-message">Already have an account? <a href="#login" onClick={(e) => { e.preventDefault(); onClose(); }}>Log in</a></p>
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 };
 
