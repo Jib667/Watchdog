@@ -1,703 +1,744 @@
-from fastapi import FastAPI, HTTPException, Depends, Query, BackgroundTasks, Path
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr, Field
 import os
+import sqlite3
+import requests
 import logging
-from datetime import datetime
-import uvicorn
-from config import PORT, DEBUG, is_api_configured, CONGRESS_API_KEY
-
-# Import database models and session from the database module
-from database import (
-    User, Representative, Bill, Vote, ApiConfig,
-    get_db, UserResponse, UserCreate, Session, ApiConfigResponse
-)
-
-# Import Congress API functions
-from congress_api import (
-    sync_representatives,
-    sync_recent_bills,
-    sync_member_votes,
-    CongressAPI
-)
-
-# Import sync manager
-from sync_manager import SyncManager, get_sync_manager
+from typing import List, Optional, Dict, Any
+from datetime import datetime, timedelta
+import secrets
+import hashlib
+import jwt
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# App initialization
-app = FastAPI(
-    title="Watchdog API", 
-    description="API for monitoring Congress representatives and tracking their voting records"
-)
+# Create FastAPI app
+app = FastAPI(title="Watchdog API", description="Simple API for Congressional Watchdog Application")
 
-# Configure CORS middleware to allow requests from the frontend
+# Add CORS middleware to allow frontend requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Frontend URL
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "*"],  # Allow your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Routes
-@app.get("/")
-def read_root():
-    """
-    Root endpoint that returns a welcome message.
-    Used to verify the API is running.
-    """
-    return {
-        "message": "Welcome to the Watchdog API",
-        "version": "1.0.0",
-        "status": "operational"
-    }
+# Configuration
+API_KEY = os.environ.get("CONGRESS_API_KEY", "")
+API_BASE_URL = os.environ.get("CONGRESS_API_URL", "https://api.congress.gov/v3")
+DATABASE_PATH = os.environ.get('DATABASE_URL', 'sqlite:///./watchdog.db').replace('sqlite:///', '')
+JWT_SECRET = os.environ.get('JWT_SECRET', secrets.token_hex(32))
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRATION_MINUTES = 60 * 24  # 24 hours
 
-# ---------------------
-# User Routes
-# ---------------------
+# Create database directory if it doesn't exist
+os.makedirs(os.path.dirname(DATABASE_PATH) if os.path.dirname(DATABASE_PATH) else '.', exist_ok=True)
 
-@app.post("/users/", response_model=UserResponse)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    """
-    Create a new user in the database.
-    
-    - Accepts user information including name, email, state, and subscription preference
-    - Returns the created user with their assigned ID
-    - Handles duplicates by returning a 400 error with details
-    """
-    # Check if user with this email already exists
-    existing_user = db.query(User).filter(User.email == user.email).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Create new user
-    db_user = User(name=user.name, email=user.email, state=user.state, subscribed=user.subscribed)
-    db.add(db_user)
-    
-    try:
-        db.commit()
-        db.refresh(db_user)
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=f"Error creating user: {str(e)}")
-    
-    return db_user
+# OAuth2 scheme for JWT authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/token")
 
-@app.get("/users/", response_model=List[UserResponse])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """
-    Retrieve a list of users from the database.
-    
-    - Supports pagination with skip and limit parameters
-    - Returns a list of user objects with all their details
-    - Used for administrative interfaces to manage users
-    """
-    users = db.query(User).offset(skip).limit(limit).all()
-    return users
+# Pydantic models
+class ApiConfig(BaseModel):
+    api_key: str
+    base_url: str = 'https://api.congress.gov/v3'
 
-@app.get("/users/{user_id}", response_model=UserResponse)
-def read_user(user_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieve a specific user by their ID.
+class UserBase(BaseModel):
+    email: EmailStr
+    username: str
+    full_name: Optional[str] = None
+    state: Optional[str] = None  # User's state (e.g., 'CA', 'NY')
+    district: Optional[str] = None  # User's congressional district (e.g., '1', '2', 'At-Large')
+
+class UserCreate(UserBase):
+    password: str
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+
+class User(UserBase):
+    id: int
+    created_at: datetime
+    is_active: bool = True
+
+class UserInDB(User):
+    password_hash: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    user_id: Optional[int] = None
+
+class Representative(BaseModel):
+    congress_id: str
+    name: str
+    state: str
+    district: Optional[str] = None
+    party: str
+    chamber: str
+
+class Bill(BaseModel):
+    bill_id: str
+    title: str
+    introduced_date: Optional[str] = None
+    status: Optional[str] = None
+    url: Optional[str] = None
+    sponsor: Optional[str] = None
+
+class Vote(BaseModel):
+    vote_id: str
+    bill_id: Optional[str] = None
+    bill_title: Optional[str] = None
+    vote_date: Optional[str] = None
+    question: Optional[str] = None
+    result: Optional[str] = None
+    chamber: str
+    description: Optional[str] = None
+
+# Database functions
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    """Initialize the database with tables for users and api configuration"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
-    - Returns full user details for the specified user
-    - Returns a 404 error if the user doesn't exist
-    """
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+    # Create tables - only user data and API config
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS api_config (
+        id INTEGER PRIMARY KEY,
+        api_key TEXT,
+        base_url TEXT
+    )
+    ''')
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        username TEXT UNIQUE,
+        email TEXT UNIQUE,
+        password_hash TEXT,
+        full_name TEXT,
+        state TEXT,
+        district TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT 1
+    )
+    ''')
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS saved_representatives (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER,
+        congress_id TEXT,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        UNIQUE (user_id, congress_id)
+    )
+    ''')
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS saved_bills (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER,
+        bill_id TEXT,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        UNIQUE (user_id, bill_id)
+    )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+# Initialize database on startup
+init_db()
+
+# Authentication functions
+def hash_password(password: str) -> str:
+    """Hash a password for storing."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a stored password against a provided password."""
+    return hash_password(plain_password) == hashed_password
+
+def get_user(username: str):
+    """Get a user by username."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    user = cursor.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+    conn.close()
+    
+    if user:
+        return dict(user)
+    return None
+
+def authenticate_user(username: str, password: str):
+    """Authenticate a user."""
+    user = get_user(username)
+    if not user:
+        return False
+    if not verify_password(password, user['password_hash']):
+        return False
     return user
 
-@app.delete("/users/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
-    """
-    Delete a user from the database.
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """Create a JWT access token."""
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=JWT_EXPIRATION_MINUTES))
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    """Get the current user from a JWT token."""
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+        token_data = TokenData(user_id=int(user_id))
+    except Exception:
+        raise credentials_exception
     
-    - Removes the user with the specified ID
-    - Returns a confirmation message if successful
-    - Returns a 404 error if the user doesn't exist
-    """
-    user = db.query(User).filter(User.id == user_id).first()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    user = cursor.execute("SELECT * FROM users WHERE id = ?", (token_data.user_id,)).fetchone()
+    conn.close()
+    
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    db.delete(user)
-    db.commit()
-    
-    return {"message": f"User with ID {user_id} deleted successfully"}
+        raise credentials_exception
+    return dict(user)
 
-# ---------------------
-# Representative Routes
-# ---------------------
+# Direct API access functions
+def get_congress_api_key():
+    # Try to get from database first
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    config = cursor.execute("SELECT api_key FROM api_config LIMIT 1").fetchone()
+    conn.close()
+    
+    if config and config['api_key']:
+        return config['api_key']
+    
+    # Fall back to environment variable
+    return API_KEY
 
-@app.get("/representatives/")
-def get_representatives(
-    chamber: Optional[str] = Query(None, description="Filter by chamber: 'House' or 'Senate'"),
-    state: Optional[str] = Query(None, description="Filter by state (two-letter code)"),
-    party: Optional[str] = Query(None, description="Filter by political party"),
-    skip: int = 0, 
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """
-    Retrieve a list of representatives with optional filtering.
+def make_congress_api_request(endpoint, params=None):
+    """Make a request to the Congress.gov API"""
+    api_key = get_congress_api_key()
+    if not api_key:
+        logger.error("No API key configured for Congress API")
+        raise HTTPException(status_code=500, detail="API key not configured")
     
-    - Can filter by chamber (House/Senate), state, or party
-    - Supports pagination with skip and limit parameters
-    - Returns a list of representative objects with their details
-    """
-    query = db.query(Representative)
+    url = f"{API_BASE_URL}{endpoint}"
     
-    if chamber:
-        query = query.filter(Representative.chamber == chamber)
-    if state:
-        query = query.filter(Representative.state == state)
-    if party:
-        query = query.filter(Representative.party == party)
+    # Add API key and format to params
+    if params is None:
+        params = {}
+    params['api_key'] = api_key
+    if 'format' not in params:
+        params['format'] = 'json'
     
-    representatives = query.offset(skip).limit(limit).all()
-    return representatives
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"API request error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"API request failed: {str(e)}")
 
-@app.get("/representatives/{rep_id}")
-def get_representative(rep_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieve a specific representative by their ID.
-    
-    - Returns full details for the specified representative
-    - Returns a 404 error if the representative doesn't exist
-    """
-    rep = db.query(Representative).filter(Representative.id == rep_id).first()
-    if rep is None:
-        raise HTTPException(status_code=404, detail="Representative not found")
-    return rep
+# API Routes
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the Watchdog API", "status": "running"}
 
-# ---------------------
-# Bill Routes
-# ---------------------
+# Auth endpoints
+@app.post("/api/auth/register", response_model=User)
+def register_user(user: UserCreate):
+    """Register a new user."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if username or email already exists
+    existing_user = cursor.execute(
+        "SELECT id FROM users WHERE username = ? OR email = ?", 
+        (user.username, user.email)
+    ).fetchone()
+    
+    if existing_user:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Username or email already registered")
+    
+    # Hash the password and insert the user
+    password_hash = hash_password(user.password)
+    cursor.execute(
+        "INSERT INTO users (username, email, password_hash, full_name, state, district) VALUES (?, ?, ?, ?, ?, ?)",
+        (user.username, user.email, password_hash, user.full_name, user.state, user.district)
+    )
+    
+    conn.commit()
+    
+    # Get the created user
+    new_user_id = cursor.lastrowid
+    new_user = cursor.execute("SELECT * FROM users WHERE id = ?", (new_user_id,)).fetchone()
+    conn.close()
+    
+    user_dict = dict(new_user)
+    return {
+        "id": user_dict["id"],
+        "username": user_dict["username"],
+        "email": user_dict["email"],
+        "full_name": user_dict["full_name"],
+        "state": user_dict["state"],
+        "district": user_dict["district"],
+        "created_at": user_dict["created_at"],
+        "is_active": bool(user_dict["is_active"])
+    }
 
-@app.get("/bills/")
-def get_bills(
-    status: Optional[str] = Query(None, description="Filter by bill status"),
-    session: Optional[int] = Query(None, description="Filter by Congress session"),
-    skip: int = 0, 
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """
-    Retrieve a list of bills with optional filtering.
-    
-    - Can filter by status or Congress session
-    - Supports pagination with skip and limit parameters
-    - Returns a list of bill objects with their details
-    """
-    query = db.query(Bill)
-    
-    if status:
-        query = query.filter(Bill.status == status)
-    if session:
-        query = query.filter(Bill.congress_session == session)
-    
-    bills = query.offset(skip).limit(limit).all()
-    return bills
-
-@app.get("/bills/{bill_id}")
-def get_bill(bill_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieve a specific bill by its ID.
-    
-    - Returns full details for the specified bill
-    - Returns a 404 error if the bill doesn't exist
-    """
-    bill = db.query(Bill).filter(Bill.id == bill_id).first()
-    if bill is None:
-        raise HTTPException(status_code=404, detail="Bill not found")
-    return bill
-
-# ---------------------
-# Vote Routes
-# ---------------------
-
-@app.get("/votes/")
-def get_votes(
-    representative_id: Optional[int] = Query(None, description="Filter by representative ID"),
-    bill_id: Optional[int] = Query(None, description="Filter by bill ID"),
-    position: Optional[str] = Query(None, description="Filter by vote position"),
-    skip: int = 0, 
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """
-    Retrieve a list of votes with optional filtering.
-    
-    - Can filter by representative, bill, or vote position
-    - Supports pagination with skip and limit parameters
-    - Returns a list of vote records with their details
-    """
-    query = db.query(Vote)
-    
-    if representative_id:
-        query = query.filter(Vote.representative_id == representative_id)
-    if bill_id:
-        query = query.filter(Vote.bill_id == bill_id)
-    if position:
-        query = query.filter(Vote.vote_position == position)
-    
-    votes = query.offset(skip).limit(limit).all()
-    return votes
-
-@app.get("/representatives/{rep_id}/votes")
-def get_representative_votes(
-    rep_id: int, 
-    position: Optional[str] = Query(None, description="Filter by vote position"),
-    skip: int = 0, 
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """
-    Retrieve all votes cast by a specific representative.
-    
-    - Returns voting history for the specified representative
-    - Can filter by vote position (Yes/No/Present/Not Voting)
-    - Returns a 404 error if the representative doesn't exist
-    """
-    # Check if representative exists
-    rep = db.query(Representative).filter(Representative.id == rep_id).first()
-    if rep is None:
-        raise HTTPException(status_code=404, detail="Representative not found")
-    
-    # Query votes
-    query = db.query(Vote).filter(Vote.representative_id == rep_id)
-    
-    if position:
-        query = query.filter(Vote.vote_position == position)
-    
-    votes = query.offset(skip).limit(limit).all()
-    return votes
-
-@app.get("/bills/{bill_id}/votes")
-def get_bill_votes(
-    bill_id: int, 
-    position: Optional[str] = Query(None, description="Filter by vote position"),
-    party: Optional[str] = Query(None, description="Filter by representative's party"),
-    skip: int = 0, 
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    """
-    Retrieve all votes cast on a specific bill.
-    
-    - Returns voting records for the specified bill
-    - Can filter by vote position or representative's party
-    - Returns a 404 error if the bill doesn't exist
-    """
-    # Check if bill exists
-    bill = db.query(Bill).filter(Bill.id == bill_id).first()
-    if bill is None:
-        raise HTTPException(status_code=404, detail="Bill not found")
-    
-    # Join Vote and Representative tables to filter by party if needed
-    query = db.query(Vote).join(Representative).filter(Vote.bill_id == bill_id)
-    
-    if position:
-        query = query.filter(Vote.vote_position == position)
-    if party:
-        query = query.filter(Representative.party == party)
-    
-    votes = query.offset(skip).limit(limit).all()
-    return votes
-
-# ---------------------
-# Congress API Configuration Routes
-# ---------------------
-
-@app.get("/api/config", response_model=List[ApiConfigResponse])
-def get_api_configs(db: Session = Depends(get_db)):
-    """
-    Retrieve all API configurations.
-    
-    - Returns all API configurations stored in the database
-    - Used for administrative interfaces to manage API keys
-    """
-    configs = db.query(ApiConfig).all()
-    return configs
-
-@app.get("/api/config/{name}", response_model=ApiConfigResponse)
-def get_api_config(name: str, db: Session = Depends(get_db)):
-    """
-    Retrieve a specific API configuration by name.
-    
-    - Returns the configuration for the specified API
-    - Returns a 404 error if the configuration doesn't exist
-    """
-    config = db.query(ApiConfig).filter(ApiConfig.name == name).first()
-    if config is None:
-        raise HTTPException(status_code=404, detail="API configuration not found")
-    return config
-
-@app.post("/api/config", response_model=ApiConfigResponse)
-def create_or_update_api_config(config_data: ApiConfigResponse, db: Session = Depends(get_db)):
-    """
-    Create or update an API configuration.
-    
-    - If a configuration with the provided name already exists, it will be updated
-    - Otherwise, a new configuration will be created
-    - Returns the created or updated configuration
-    """
-    # Check if configuration already exists
-    existing_config = db.query(ApiConfig).filter(ApiConfig.name == config_data.name).first()
-    
-    if existing_config:
-        # Update existing configuration
-        existing_config.api_key = config_data.api_key
-        existing_config.base_url = config_data.base_url
-        existing_config.is_active = config_data.is_active
-        existing_config.updated_at = datetime.utcnow()
-        db.commit()
-        db.refresh(existing_config)
-        return existing_config
-    else:
-        # Create new configuration
-        new_config = ApiConfig(
-            name=config_data.name,
-            api_key=config_data.api_key,
-            base_url=config_data.base_url,
-            is_active=config_data.is_active,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+@app.post("/api/auth/token", response_model=Token)
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """Authenticate and return a JWT token."""
+    user = authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-        db.add(new_config)
-        db.commit()
-        db.refresh(new_config)
-        return new_config
-
-# ---------------------
-# Data Synchronization Routes
-# ---------------------
-
-@app.post("/api/sync/representatives")
-def sync_representatives_endpoint(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """
-    Synchronize representatives data from the Congress API.
     
-    - Fetches current representatives data from the Congress API
-    - Updates existing records and creates new ones as needed
-    - Runs as a background task to avoid blocking the API
-    """
-    # Add synchronization task to background
-    background_tasks.add_task(sync_representatives, db)
+    access_token = create_access_token(
+        data={"sub": str(user["id"])}
+    )
     
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/api/users/me", response_model=User)
+def read_users_me(current_user: dict = Depends(get_current_user)):
+    """Get the current authenticated user."""
     return {
-        "status": "started",
-        "message": "Representatives synchronization started in background"
+        "id": current_user["id"],
+        "username": current_user["username"],
+        "email": current_user["email"],
+        "full_name": current_user["full_name"],
+        "state": current_user["state"],
+        "district": current_user["district"],
+        "created_at": current_user["created_at"],
+        "is_active": bool(current_user["is_active"])
     }
 
-@app.post("/api/sync/bills")
-def sync_bills_endpoint(
-    background_tasks: BackgroundTasks, 
-    days_back: int = Query(30, description="Number of days to look back for bills"),
-    db: Session = Depends(get_db)
-):
-    """
-    Synchronize recent bills data from the Congress API.
+@app.put("/api/users/me", response_model=User)
+def update_user(user_update: UserUpdate, current_user: dict = Depends(get_current_user)):
+    """Update the current user."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
-    - Fetches bills from the last specified number of days
-    - Updates existing records and creates new ones as needed
-    - Runs as a background task to avoid blocking the API
-    """
-    # Add synchronization task to background
-    background_tasks.add_task(sync_recent_bills, db, days_back=days_back)
+    updates = {}
+    params = []
     
+    if user_update.full_name is not None:
+        updates["full_name"] = user_update.full_name
+        params.append(user_update.full_name)
+    
+    if user_update.email is not None:
+        # Check if email is already used by another user
+        existing = cursor.execute(
+            "SELECT id FROM users WHERE email = ? AND id != ?", 
+            (user_update.email, current_user["id"])
+        ).fetchone()
+        
+        if existing:
+            conn.close()
+            raise HTTPException(status_code=400, detail="Email already in use")
+        
+        updates["email"] = user_update.email
+        params.append(user_update.email)
+    
+    if user_update.password is not None:
+        updates["password_hash"] = hash_password(user_update.password)
+        params.append(updates["password_hash"])
+    
+    if not updates:
+        conn.close()
+        return current_user
+    
+    # Construct the SQL query
+    set_clause = ", ".join(f"{key} = ?" for key in updates)
+    params.append(current_user["id"])
+    
+    cursor.execute(f"UPDATE users SET {set_clause} WHERE id = ?", params)
+    conn.commit()
+    
+    # Get the updated user
+    updated_user = cursor.execute("SELECT * FROM users WHERE id = ?", (current_user["id"],)).fetchone()
+    conn.close()
+    
+    user_dict = dict(updated_user)
     return {
-        "status": "started",
-        "message": f"Bills synchronization started in background (looking back {days_back} days)"
+        "id": user_dict["id"],
+        "username": user_dict["username"],
+        "email": user_dict["email"],
+        "full_name": user_dict["full_name"],
+        "state": user_dict["state"],
+        "district": user_dict["district"],
+        "created_at": user_dict["created_at"],
+        "is_active": bool(user_dict["is_active"])
     }
 
-@app.post("/api/sync/representatives/{rep_id}/votes")
-def sync_representative_votes_endpoint(
-    rep_id: int = Path(..., description="Representative ID"),
-    background_tasks: BackgroundTasks = None,
-    db: Session = Depends(get_db)
-):
-    """
-    Synchronize voting records for a specific representative.
+# API configuration
+@app.post("/api/config/api")
+def set_api_config(config: ApiConfig):
+    """Set the Congress.gov API configuration"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
-    - Fetches voting history for the specified representative
-    - Updates existing records and creates new ones as needed
-    - Can run in the background or immediately based on the request
-    """
-    # Verify representative exists
-    rep = db.query(Representative).filter(Representative.id == rep_id).first()
-    if rep is None:
-        raise HTTPException(status_code=404, detail="Representative not found")
+    # Clear existing and insert new
+    cursor.execute("DELETE FROM api_config")
+    cursor.execute(
+        "INSERT INTO api_config (api_key, base_url) VALUES (?, ?)",
+        (config.api_key, config.base_url)
+    )
     
-    if background_tasks:
-        # Run in background
-        background_tasks.add_task(sync_member_votes, db, rep_id)
+    conn.commit()
+    conn.close()
+    
+    return {"message": "API configuration updated successfully"}
+
+@app.get("/api/config/api")
+def get_api_config():
+    """Get the Congress.gov API configuration status"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    config = cursor.execute("SELECT id, base_url FROM api_config LIMIT 1").fetchone()
+    conn.close()
+    
+    if config:
         return {
-            "status": "started",
-            "message": f"Vote synchronization for representative {rep_id} started in background"
+            "configured": True,
+            "base_url": config['base_url']
         }
     else:
-        # Run immediately (for testing)
-        import asyncio
-        asyncio.run(sync_member_votes(db, rep_id))
         return {
-            "status": "completed",
-            "message": f"Vote synchronization for representative {rep_id} completed"
+            "configured": False,
+            "base_url": API_BASE_URL
         }
 
-@app.get("/api/test/congress-api")
-async def test_congress_api(db: Session = Depends(get_db)):
-    """
-    Test the Congress API connection.
-    
-    - Attempts to connect to the Congress API using the stored configuration
-    - Returns success or error message along with any data received
-    - Used for verifying API keys and configuration
-    """
+# Representatives endpoints - directly fetch from API, no local storage
+@app.get("/api/representatives/house")
+def get_house_representatives():
+    """Get representatives from the House"""
     try:
-        # Create API client
-        api = CongressAPI(db)
+        # Current congress number (118 for 2023-2024)
+        congress = 118
         
-        # Try to get the current Congress
-        response = await api._make_request("/congress", {"limit": 1})
+        # Make API request
+        data = make_congress_api_request(f"/congress/{congress}/members", {
+            "chamber": "house"
+        })
         
-        # Close client
-        await api.close()
+        # Extract and normalize members
+        representatives = []
+        for member in data.get("members", []):
+            representatives.append({
+                "congress_id": member.get("bioguideId"),
+                "name": f"{member.get('lastName', '')}, {member.get('firstName', '')}",
+                "state": member.get("state"),
+                "district": member.get("district"),
+                "party": member.get("party"),
+                "chamber": "house"
+            })
         
-        return {
-            "status": "success",
-            "message": "Successfully connected to Congress API",
-            "data": response
-        }
+        return {"representatives": representatives}
     except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Failed to connect to Congress API: {str(e)}"
-        }
-
-# Add dependency for sync manager
-def get_sync_manager_dep(db: Session = Depends(get_db)):
-    return get_sync_manager(db)
-
-# Add routes for sync management
-@app.get("/api/sync/status", response_model=Dict[str, Any])
-async def get_sync_status(db: Session = Depends(get_db)):
-    """Get the status of data synchronization with the Congress API."""
-    try:
-        # Check if API is configured
-        api_configured = is_api_configured()
-        
-        # Get latest update timestamps
-        latest_rep = db.query(Representative).order_by(
-            Representative.last_updated.desc()
-        ).first()
-        
-        latest_bill = db.query(Bill).order_by(
-            Bill.last_updated.desc()
-        ).first()
-        
-        latest_vote = db.query(Vote).order_by(
-            Vote.last_updated.desc()
-        ).first()
-        
-        return {
-            "api_configured": api_configured,
-            "latest_updates": {
-                "representatives": latest_rep.last_updated.isoformat() if latest_rep else None,
-                "bills": latest_bill.last_updated.isoformat() if latest_bill else None,
-                "votes": latest_vote.last_updated.isoformat() if latest_vote else None
-            },
-            "record_counts": {
-                "representatives": db.query(Representative).count(),
-                "bills": db.query(Bill).count(),
-                "votes": db.query(Vote).count()
-            }
-        }
-    except Exception as e:
-        logger.error(f"Error getting sync status: {e}")
+        logger.error(f"Error fetching House representatives: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/sync/representatives", response_model=Dict[str, Any])
-async def sync_representatives(
-    force: bool = False,
-    background_tasks: BackgroundTasks = None,
-    sync_manager: SyncManager = Depends(get_sync_manager_dep)
-):
-    """Synchronize representatives data from the Congress API."""
-    if not is_api_configured():
-        raise HTTPException(status_code=400, detail="Congress API not configured")
-    
+@app.get("/api/representatives/senate")
+def get_senate_representatives():
+    """Get representatives from the Senate"""
     try:
-        # If background tasks is provided, run in background
-        if background_tasks:
-            background_tasks.add_task(sync_manager.sync_representatives, force)
-            return {"status": "started", "message": "Synchronization started in background"}
+        # Current congress number (118 for 2023-2024)
+        congress = 118
         
-        # Otherwise run synchronously
-        result = await sync_manager.sync_representatives(force)
-        return result
+        # Make API request
+        data = make_congress_api_request(f"/congress/{congress}/members", {
+            "chamber": "senate"
+        })
+        
+        # Extract and normalize members
+        senators = []
+        for member in data.get("members", []):
+            senators.append({
+                "congress_id": member.get("bioguideId"),
+                "name": f"{member.get('lastName', '')}, {member.get('firstName', '')}",
+                "state": member.get("state"),
+                "district": None,  # Senators don't have districts
+                "party": member.get("party"),
+                "chamber": "senate"
+            })
+        
+        return {"representatives": senators}
     except Exception as e:
-        logger.error(f"Error syncing representatives: {e}")
+        logger.error(f"Error fetching Senate representatives: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/sync/bills", response_model=Dict[str, Any])
-async def sync_bills(
-    limit: int = 100,
-    force: bool = False,
-    background_tasks: BackgroundTasks = None,
-    sync_manager: SyncManager = Depends(get_sync_manager_dep)
-):
-    """Synchronize bills data from the Congress API."""
-    if not is_api_configured():
-        raise HTTPException(status_code=400, detail="Congress API not configured")
-    
+@app.get("/api/representatives")
+def get_all_representatives():
+    """Get all representatives from both chambers"""
+    house = get_house_representatives()["representatives"]
+    senate = get_senate_representatives()["representatives"]
+    return {"representatives": house + senate}
+
+# Bills endpoints - directly fetch from API, no local storage
+@app.get("/api/bills/recent")
+def get_recent_bills(limit: int = 20):
+    """Get recent bills from Congress"""
     try:
-        # If background tasks is provided, run in background
-        if background_tasks:
-            background_tasks.add_task(sync_manager.sync_recent_bills, limit, force)
-            return {"status": "started", "message": "Synchronization started in background"}
+        # Calculate 30 days ago in ISO format
+        thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
         
-        # Otherwise run synchronously
-        result = await sync_manager.sync_recent_bills(limit, force)
-        return result
+        # Make API request
+        data = make_congress_api_request("/bill", {
+            "limit": limit,
+            "sort": "updateDate+desc",
+            "fromDateTime": thirty_days_ago
+        })
+        
+        # Extract and normalize bills
+        bills = []
+        for bill in data.get("bills", []):
+            sponsor_name = "Unknown"
+            if bill.get("sponsors") and len(bill["sponsors"]) > 0:
+                sponsor = bill["sponsors"][0]
+                sponsor_name = f"{sponsor.get('lastName', '')}, {sponsor.get('firstName', '')}"
+            
+            bills.append({
+                "bill_id": bill.get("billNumber"),
+                "title": bill.get("title"),
+                "introduced_date": bill.get("introducedDate"),
+                "status": bill.get("latestAction", {}).get("text", "Unknown"),
+                "url": bill.get("url"),
+                "sponsor": sponsor_name
+            })
+        
+        return {"bills": bills}
     except Exception as e:
-        logger.error(f"Error syncing bills: {e}")
+        logger.error(f"Error fetching recent bills: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/sync/votes", response_model=Dict[str, Any])
-async def sync_votes(
-    limit: int = 50,
-    force: bool = False,
-    background_tasks: BackgroundTasks = None,
-    sync_manager: SyncManager = Depends(get_sync_manager_dep)
-):
-    """Synchronize votes data from the Congress API."""
-    if not is_api_configured():
-        raise HTTPException(status_code=400, detail="Congress API not configured")
-    
+# Votes endpoints - directly fetch from API, no local storage
+@app.get("/api/votes/recent")
+def get_recent_votes(limit: int = 20):
+    """Get recent votes from Congress"""
     try:
-        # If background tasks is provided, run in background
-        if background_tasks:
-            background_tasks.add_task(sync_manager.sync_recent_votes, limit, force)
-            return {"status": "started", "message": "Synchronization started in background"}
+        # Calculate 30 days ago in ISO format
+        thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
         
-        # Otherwise run synchronously
-        result = await sync_manager.sync_recent_votes(limit, force)
-        return result
-    except Exception as e:
-        logger.error(f"Error syncing votes: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/sync/all", response_model=Dict[str, Any])
-async def sync_all(
-    force: bool = False,
-    background_tasks: BackgroundTasks = None,
-    sync_manager: SyncManager = Depends(get_sync_manager_dep)
-):
-    """Synchronize all data from the Congress API."""
-    if not is_api_configured():
-        raise HTTPException(status_code=400, detail="Congress API not configured")
-    
-    try:
-        # If background tasks is provided, run in background
-        if background_tasks:
-            background_tasks.add_task(sync_manager.run_full_sync, force)
-            return {"status": "started", "message": "Full synchronization started in background"}
+        # Current congress number (118 for 2023-2024)
+        congress = 118
         
-        # Otherwise run synchronously
-        result = await sync_manager.run_full_sync(force)
-        return result
-    except Exception as e:
-        logger.error(f"Error running full sync: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/config/api", response_model=Dict[str, Any])
-async def get_api_config(db: Session = Depends(get_db)):
-    """Get the API configuration status."""
-    try:
-        # Check if API key is configured
-        api_key_configured = is_api_configured()
+        # Try different endpoints (some might not work)
+        endpoints = [
+            (f"/congress/{congress}/house/votes", "house"),
+            (f"/congress/{congress}/senate/votes", "senate"),
+            ("/vote", None)  # Generic endpoint
+        ]
         
-        # Get API configs from database
-        api_configs = db.query(ApiConfig).all()
-        
-        return {
-            "api_key_configured": api_key_configured,
-            "api_configs": [
-                {
-                    "name": config.name,
-                    "is_active": config.is_active,
-                    "created_at": config.created_at.isoformat(),
-                    "updated_at": config.updated_at.isoformat() if config.updated_at else None
+        for endpoint, chamber in endpoints:
+            try:
+                # Make API request
+                params = {
+                    "limit": limit,
+                    "sort": "date+desc",
+                    "fromDateTime": thirty_days_ago
                 }
-                for config in api_configs
-            ]
-        }
+                
+                if chamber:
+                    params["chamber"] = chamber
+                
+                data = make_congress_api_request(endpoint, params)
+                
+                # If we got data, process it and return
+                if "votes" in data:
+                    votes = []
+                    for vote in data.get("votes", []):
+                        votes.append({
+                            "vote_id": vote.get("voteNumber") or vote.get("rollCallNumber"),
+                            "bill_id": vote.get("billNumber"),
+                            "bill_title": vote.get("title") or vote.get("billTitle"),
+                            "vote_date": vote.get("date") or vote.get("voteDate"),
+                            "question": vote.get("question"),
+                            "result": vote.get("result"),
+                            "chamber": vote.get("chamber") or chamber,
+                            "description": vote.get("description") or vote.get("voteTitle")
+                        })
+                    
+                    return {"votes": votes}
+            except Exception as e:
+                logger.warning(f"Failed to get votes from {endpoint}: {str(e)}")
+                continue
+        
+        # If we get here, none of the endpoints worked
+        return {"votes": [], "error": "Could not retrieve votes from any endpoint"}
     except Exception as e:
-        logger.error(f"Error getting API config: {e}")
+        logger.error(f"Error fetching recent votes: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# API Config model for updates
-class ApiConfigUpdate(BaseModel):
-    api_key: str
-    base_url: Optional[str] = None
-    is_active: Optional[bool] = True
-
-@app.post("/api/config/api", response_model=Dict[str, Any])
-async def update_api_config(
-    config_data: ApiConfigUpdate,
-    db: Session = Depends(get_db)
-):
-    """Update the API configuration."""
-    try:
-        # Check if config exists
-        api_config = db.query(ApiConfig).filter_by(name="congress_api").first()
-        
-        if api_config:
-            # Update existing config
-            api_config.api_key = config_data.api_key
-            if config_data.base_url:
-                api_config.base_url = config_data.base_url
-            api_config.is_active = config_data.is_active
-            api_config.updated_at = datetime.utcnow()
-        else:
-            # Create new config
-            api_config = ApiConfig(
-                name="congress_api",
-                api_key=config_data.api_key,
-                base_url=config_data.base_url or "https://api.congress.gov/v3",
-                is_active=config_data.is_active,
-                created_at=datetime.utcnow()
-            )
-            db.add(api_config)
-        
-        db.commit()
-        
-        return {
-            "status": "success",
-            "message": "API configuration updated",
-            "config": {
-                "name": api_config.name,
-                "is_active": api_config.is_active,
-                "created_at": api_config.created_at.isoformat(),
-                "updated_at": api_config.updated_at.isoformat() if api_config.updated_at else None
-            }
-        }
-    except Exception as e:
-        logger.error(f"Error updating API config: {e}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    # Create tables
-    from database import Base, engine
-    Base.metadata.create_all(bind=engine)
+# User saved items endpoints
+@app.post("/api/users/me/representatives/{congress_id}")
+def save_representative(congress_id: str, current_user: dict = Depends(get_current_user)):
+    """Save a representative to the user's list"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
-    # Start server
-    uvicorn.run("server:app", host="0.0.0.0", port=int(PORT), reload=DEBUG) 
+    try:
+        cursor.execute(
+            "INSERT INTO saved_representatives (user_id, congress_id) VALUES (?, ?)",
+            (current_user["id"], congress_id)
+        )
+        conn.commit()
+        conn.close()
+        return {"message": "Representative saved successfully"}
+    except sqlite3.IntegrityError:
+        conn.close()
+        return {"message": "Representative already saved"}
+
+@app.delete("/api/users/me/representatives/{congress_id}")
+def remove_saved_representative(congress_id: str, current_user: dict = Depends(get_current_user)):
+    """Remove a representative from the user's list"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "DELETE FROM saved_representatives WHERE user_id = ? AND congress_id = ?",
+        (current_user["id"], congress_id)
+    )
+    
+    conn.commit()
+    conn.close()
+    
+    return {"message": "Representative removed successfully"}
+
+@app.get("/api/users/me/representatives")
+def get_saved_representatives(current_user: dict = Depends(get_current_user)):
+    """Get all representatives saved by the user"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    saved = cursor.execute(
+        "SELECT congress_id FROM saved_representatives WHERE user_id = ?", 
+        (current_user["id"],)
+    ).fetchall()
+    
+    conn.close()
+    
+    congress_ids = [item["congress_id"] for item in saved]
+    
+    if not congress_ids:
+        return {"representatives": []}
+    
+    # Fetch details for all representatives
+    all_reps = get_all_representatives()["representatives"]
+    
+    # Filter to only include saved representatives
+    saved_reps = [rep for rep in all_reps if rep["congress_id"] in congress_ids]
+    
+    return {"representatives": saved_reps}
+
+@app.post("/api/users/me/bills/{bill_id}")
+def save_bill(bill_id: str, current_user: dict = Depends(get_current_user)):
+    """Save a bill to the user's list"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute(
+            "INSERT INTO saved_bills (user_id, bill_id) VALUES (?, ?)",
+            (current_user["id"], bill_id)
+        )
+        conn.commit()
+        conn.close()
+        return {"message": "Bill saved successfully"}
+    except sqlite3.IntegrityError:
+        conn.close()
+        return {"message": "Bill already saved"}
+
+@app.delete("/api/users/me/bills/{bill_id}")
+def remove_saved_bill(bill_id: str, current_user: dict = Depends(get_current_user)):
+    """Remove a bill from the user's list"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "DELETE FROM saved_bills WHERE user_id = ? AND bill_id = ?",
+        (current_user["id"], bill_id)
+    )
+    
+    conn.commit()
+    conn.close()
+    
+    return {"message": "Bill removed successfully"}
+
+@app.get("/api/users/me/bills")
+def get_saved_bills(current_user: dict = Depends(get_current_user)):
+    """Get all bills saved by the user"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    saved = cursor.execute(
+        "SELECT bill_id FROM saved_bills WHERE user_id = ?", 
+        (current_user["id"],)
+    ).fetchall()
+    
+    conn.close()
+    
+    bill_ids = [item["bill_id"] for item in saved]
+    
+    if not bill_ids:
+        return {"bills": []}
+    
+    # Fetch details for each bill
+    bills = []
+    for bill_id in bill_ids:
+        try:
+            data = make_congress_api_request(f"/bill/{bill_id}")
+            bill = data.get("bill", {})
+            
+            sponsor_name = "Unknown"
+            if bill.get("sponsors") and len(bill["sponsors"]) > 0:
+                sponsor = bill["sponsors"][0]
+                sponsor_name = f"{sponsor.get('lastName', '')}, {sponsor.get('firstName', '')}"
+            
+            bills.append({
+                "bill_id": bill.get("billNumber"),
+                "title": bill.get("title"),
+                "introduced_date": bill.get("introducedDate"),
+                "status": bill.get("latestAction", {}).get("text", "Unknown"),
+                "url": bill.get("url"),
+                "sponsor": sponsor_name
+            })
+        except Exception as e:
+            logger.warning(f"Error fetching bill {bill_id}: {str(e)}")
+    
+    return {"bills": bills}
+
+# Run the server if executed directly
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 5000))
+    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=True) 

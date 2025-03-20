@@ -1,6 +1,7 @@
 import './Home.css';
+import { useContext } from 'react';
 
-const Home = () => {
+const Home = ({ onSignUpClick }) => {
   return (
     <div className="home-page">
       <section className="hero-section">
@@ -12,7 +13,7 @@ const Home = () => {
             <p className="hero-description">
               Free, open-source software providing transparency and accountability in government
             </p>
-            <a href="#features" className="get-started-button">Learn More</a>
+            <button onClick={onSignUpClick} className="get-started-button">Sign Up</button>
           </div>
         </div>
       </section>
@@ -51,8 +52,8 @@ const Home = () => {
             transparency not just in government, but in the tools we use to monitor it.
           </p>
           <div className="contribute-links">
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="contribute-link">View Source</a>
-            <a href="https://github.com/issues" target="_blank" rel="noopener noreferrer" className="contribute-link">Contribute</a>
+            <a href="https://github.com/Jib667/Watchdog" target="_blank" rel="noopener noreferrer" className="contribute-link">View Source</a>
+            <a href="https://github.com/Jib667/Watchdog/issues" target="_blank" rel="noopener noreferrer" className="contribute-link">Contribute</a>
           </div>
         </div>
       </section>

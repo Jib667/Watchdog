@@ -2,7 +2,7 @@ import { NavLink, Link } from 'react-router-dom';
 import './Sidebar.css';
 import { useEffect } from 'react';
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, onClose, user }) => {
   // Add logging to debug sidebar state
   console.log("Sidebar render - isOpen:", isOpen);
 
@@ -27,11 +27,30 @@ const Sidebar = ({ isOpen, onClose }) => {
           <button className="close-button" onClick={onClose}>×</button>
           <Link to="/" className="sidebar-logo-link" onClick={onClose}>
             <div className="sidebar-logo-text">
-              <h2>Watchdog</h2>
-              <p>Congressional Monitoring</p>
+              <h2 className="orbitron-text">WATCHDOG</h2>
+              <p className="centered-subtext">Congressional Oversight</p>
             </div>
           </Link>
         </div>
+        
+        {user && (
+          <div className="sidebar-user-info">
+            <div className="user-avatar">
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+            <div className="user-details">
+              <p className="user-name">{user.full_name || user.username}</p>
+              <p className="user-location">
+                {user.state && user.district 
+                  ? `${user.state}-${user.district}`
+                  : user.state 
+                    ? user.state 
+                    : 'No location set'}
+              </p>
+            </div>
+          </div>
+        )}
+        
         <nav className="sidebar-nav">
           <ul>
             <li>
@@ -62,7 +81,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           </ul>
         </nav>
         <div className="sidebar-footer">
-          <p>© 2023 Watchdog</p>
+          <p>&copy; 2025 <a href="https://github.com/Jib667/Watchdog" target="_blank" rel="noopener noreferrer" style={{color: 'inherit', textDecoration: 'underline'}}>Watchdog</a></p>
         </div>
       </div>
     </>

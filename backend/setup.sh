@@ -1,43 +1,73 @@
 #!/bin/bash
+# Watchdog Backend Setup Script
+# This script sets up the Watchdog backend environment
 
-# Setup Script for Watchdog Backend
-echo "====== Watchdog Backend Setup ======"
-echo
+# Exit on any error
+set -e
 
-# Check if Python is installed
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+echo -e "${GREEN}====================================${NC}"
+echo -e "${GREEN}  Setting up Watchdog Backend      ${NC}"
+echo -e "${GREEN}====================================${NC}"
+
+# Check if Python 3 is installed
 if ! command -v python3 &> /dev/null; then
-    echo "Error: Python 3 is not installed. Please install Python 3 and try again."
+    echo -e "${RED}Python 3 is not installed. Please install Python 3 and try again.${NC}"
     exit 1
 fi
 
-# Check if virtual environment exists
-if [ ! -d "../venv" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv ../venv
+# Check for virtual environment
+if [ ! -d "venv" ]; then
+    echo -e "${YELLOW}Creating Python virtual environment...${NC}"
+    python3 -m venv venv
 fi
 
 # Activate virtual environment
-echo "Activating virtual environment..."
-source ../venv/bin/activate || { echo "Error: Failed to activate virtual environment."; exit 1; }
+echo -e "${YELLOW}Activating virtual environment...${NC}"
+source venv/bin/activate || source venv/Scripts/activate
 
-# Install dependencies
-echo "Installing dependencies..."
-pip install -r requirements.txt || { echo "Error: Failed to install dependencies."; exit 1; }
+# Install requirements
+echo -e "${YELLOW}Installing Python dependencies...${NC}"
+pip install -r requirements.txt
 
-# Create necessary directories
-echo "Setting up directory structure..."
-mkdir -p ../backend/data
+# Generate a JWT secret key
+JWT_SECRET=$(python -c "import secrets; print(secrets.token_hex(32))")
 
-# Initialize the database
-echo "Initializing database..."
-python init_db.py || { echo "Error: Failed to initialize database."; exit 1; }
+# Create .env file if it doesn't exist
+if [ ! -f ".env" ]; then
+    echo -e "${YELLOW}Creating .env file...${NC}"
+    echo "# Watchdog Backend Environment Variables" > .env
+    echo "CONGRESS_API_KEY=" >> .env
+    echo "CONGRESS_API_URL=https://api.congress.gov/v3" >> .env
+    echo "DATABASE_URL=sqlite:///./watchdog.db" >> .env
+    echo "JWT_SECRET=${JWT_SECRET}" >> .env
+    echo "ADMIN_USERNAME=admin" >> .env
+    echo "ADMIN_PASSWORD=watchdog123" >> .env
+    echo -e "${YELLOW}Created .env file. Please edit it to add your Congress.gov API key.${NC}"
+    echo -e "${YELLOW}You can get an API key from https://api.congress.gov/sign-up${NC}"
+    echo -e "${YELLOW}Also, please change the default admin password in the .env file!${NC}"
+fi
 
-echo
-echo "====== Setup complete! ======"
-echo "To start the server, run: python server.py"
-echo "The API will be available at: http://localhost:5000"
-echo
-echo "API documentation will be available at:"
-echo "- http://localhost:5000/docs (Swagger UI)"
-echo "- http://localhost:5000/redoc (ReDoc)"
-echo 
+# Reset and initialize the database
+echo -e "${YELLOW}Initializing database...${NC}"
+python fix_database.py
+python init_db.py
+
+echo -e "${GREEN}====================================${NC}"
+echo -e "${GREEN}  Setup completed successfully!     ${NC}"
+echo -e "${GREEN}====================================${NC}"
+echo -e "${YELLOW}To start the server, run:${NC}"
+echo -e "${GREEN}source venv/bin/activate${NC}"
+echo -e "${GREEN}python -m uvicorn server:app --reload${NC}"
+echo -e "${YELLOW}The API will be available at:${NC}"
+echo -e "${GREEN}http://localhost:8000${NC}"
+echo -e "${YELLOW}API documentation:${NC}"
+echo -e "${GREEN}http://localhost:8000/docs${NC}"
+echo -e "${YELLOW}Default admin credentials:${NC}"
+echo -e "${GREEN}Username: admin${NC}"
+echo -e "${GREEN}Password: watchdog123${NC}" 

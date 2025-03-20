@@ -71,6 +71,13 @@
   color: #E9D8FD;
 }
 
+.centered-subtext {
+  text-align: center;
+  width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+
 .sidebar-nav {
   flex: 1;
   padding: 20px 0;
@@ -147,4 +154,49 @@
 
 .sidebar-logo-link:hover {
   opacity: 0.9;
+}
+
+/* User info styles in sidebar */
+.sidebar-user-info {
+  display: flex;
+  align-items: center;
+  padding: 20px 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 10px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3a8ddd, #5d52e4);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.user-details {
+  flex: 1;
+  overflow: hidden;
+}
+
+.user-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 3px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-location {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
 } 

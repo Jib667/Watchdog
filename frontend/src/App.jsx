@@ -13,10 +13,6 @@ import Home from './pages/Home'
 import Representatives from './pages/Representatives'
 import Senate from './pages/Senate'
 import Contact from './pages/Contact'
-import HomePage from './pages/HomePage'
-import RepresentativesPage from './pages/RepresentativesPage'
-import SenatePage from './pages/SenatePage'
-import ContactPage from './pages/ContactPage'
 import AdminPage from './pages/AdminPage'
 
 function App() {
@@ -24,11 +20,57 @@ function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Add debugging for sidebar state
   useEffect(() => {
     console.log("Sidebar state changed:", sidebarOpen);
   }, [sidebarOpen]);
+  
+  // Check for user authentication on load
+  useEffect(() => {
+    const checkUserAuth = async () => {
+      setIsLoading(true);
+      const token = localStorage.getItem('accessToken');
+      
+      if (token) {
+        try {
+          const response = await fetch('/api/users/me', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            console.log('User data fetched:', userData);
+            setUser(userData);
+          } else {
+            // If the token is invalid, clear it
+            console.log('Invalid token, clearing authentication');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('tokenType');
+            setUser(null);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setUser(null);
+        }
+      }
+      
+      setIsLoading(false);
+    };
+    
+    checkUserAuth();
+  }, []);
+  
+  // Handle user logout
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('tokenType');
+    setUser(null);
+  };
   
   // Handle scroll events to update header appearance
   useEffect(() => {
@@ -58,6 +100,25 @@ function App() {
   
   const closeLogin = () => {
     setShowLogin(false);
+    // After successful login, we should refresh user data
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      fetch('/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(response => {
+        if (response.ok) return response.json();
+        throw new Error('Failed to fetch user data');
+      })
+      .then(userData => {
+        setUser(userData);
+      })
+      .catch(error => {
+        console.error('Error fetching user data after login:', error);
+      });
+    }
   };
   
   const closeSignUp = () => {
@@ -75,6 +136,7 @@ function App() {
         <Sidebar 
           isOpen={sidebarOpen} 
           onClose={() => setSidebarOpen(false)} 
+          user={user}
         />
         <div className="sparkle"></div>
         <div className="sparkle"></div>
@@ -106,18 +168,29 @@ function App() {
             </Link>
           </div>
           <div className="nav-buttons">
-            <button className="login-button" onClick={handleLoginClick}>Login</button>
-            <button className="signup-button" onClick={handleSignUpClick}>Sign Up</button>
+            {isLoading ? (
+              <div className="loading-auth">Loading...</div>
+            ) : user ? (
+              <div className="user-auth">
+                <span className="user-welcome">Welcome, {user.username}</span>
+                <button className="logout-button" onClick={handleLogout}>Logout</button>
+              </div>
+            ) : (
+              <>
+                <button className="login-button" onClick={handleLoginClick}>Login</button>
+                <button className="signup-button" onClick={handleSignUpClick}>Sign Up</button>
+              </>
+            )}
           </div>
         </header>
         
         <main className="main-content">
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/representatives" element={<RepresentativesPage />} />
-            <Route path="/senate" element={<SenatePage />} />
-            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/" element={<Home onSignUpClick={handleSignUpClick} />} />
+            <Route path="/home" element={<Home onSignUpClick={handleSignUpClick} />} />
+            <Route path="/representatives" element={<Representatives />} />
+            <Route path="/senate" element={<Senate />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/admin" element={<AdminPage />} />
           </Routes>
         </main>
@@ -127,7 +200,7 @@ function App() {
             <div className="footer-section">
               <div className="logo-container">
                 <Link to="/" className="logo-link">
-                  <span className="logo-text">Watchdog</span>
+                  <span className="logo-text orbitron-text" style={{textAlign: 'left', display: 'block'}}>WATCHDOG</span>
                 </Link>
               </div>
               <p className="footer-description">Making congressional monitoring accessible and transparent for all citizens.</p>
@@ -152,13 +225,13 @@ function App() {
             <div className="footer-section">
               <h4>Connect</h4>
               <div className="social-links">
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="social-link">GitHub</a>
+                <a href="https://github.com/Jib667/Watchdog" target="_blank" rel="noopener noreferrer" className="social-link">GitHub</a>
                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="social-link">Twitter</a>
               </div>
             </div>
           </div>
           <div className="footer-bottom">
-            <p>&copy; 2023 Watchdog. All rights reserved. Open source software for citizen oversight.</p>
+            <p>&copy; 2025 Watchdog. All rights reserved. <a href="https://github.com/Jib667/Watchdog" target="_blank" rel="noopener noreferrer" style={{color: 'inherit', textDecoration: 'underline'}}>Open source software</a> for citizen oversight.</p>
           </div>
         </footer>
         

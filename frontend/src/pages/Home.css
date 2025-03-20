@@ -44,7 +44,7 @@
 }
 
 .get-started-button {
-  background: #E74C3C;
+  background: linear-gradient(135deg, #E74C3C, #d32f2f);
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -52,12 +52,17 @@
   font-size: 1.125rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
   margin-top: 1rem;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+  text-decoration: none;
+  display: inline-block;
 }
 
 .get-started-button:hover {
-  background: #C0392B;
+  background: linear-gradient(135deg, #d32f2f, #c62828);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.5);
 }
 
 .features-section {
@@ -114,54 +119,94 @@
   border-radius: 1rem;
   margin: 4rem 0;
   color: white;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
 .about-section h2 {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
   color: white;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.5rem;
+}
+
+.about-section h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(135deg, #E74C3C, #d32f2f);
+  border-radius: 3px;
 }
 
 .about-section p {
   color: rgba(255, 255, 255, 0.9);
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
+  line-height: 1.7;
+  margin-bottom: 2rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .open-source-note {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 2rem;
+  margin-top: 2rem;
+  position: relative;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.open-source-note::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .open-source-note h3 {
   color: #E74C3C;
-  margin-bottom: 1rem;
+  margin-bottom: 1.2rem;
   font-weight: 600;
+  font-size: 1.5rem;
 }
 
 .contribute-links {
   display: flex;
-  gap: 1rem;
-  margin-top: 1.25rem;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  justify-content: center;
 }
 
 .contribute-link {
   background-color: rgba(255, 255, 255, 0.1);
   color: white;
   text-decoration: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
+  padding: 0.7rem 1.5rem;
+  border-radius: 2rem;
   font-weight: 500;
   transition: all 0.3s ease;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+  min-width: 140px;
+  text-align: center;
 }
 
 .contribute-link:hover {
   background-color: rgba(231, 76, 60, 0.8);
   border-color: rgba(231, 76, 60, 0.9);
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+  color: white;
 }
 
 @media (max-width: 1024px) {

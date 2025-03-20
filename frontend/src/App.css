@@ -303,7 +303,7 @@ h1, h2, h3, h4 {
 .signup-button {
   padding: 0.5rem 1.25rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 2rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -313,11 +313,13 @@ h1, h2, h3, h4 {
   background-color: rgba(255, 255, 255, 0.1);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
 }
 
 .login-button:hover {
   background-color: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
 .signup-button {
@@ -393,7 +395,7 @@ h1, h2, h3, h4 {
 }
 
 .get-started-button {
-  background: #E74C3C;
+  background: linear-gradient(135deg, #E74C3C, #d32f2f);
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -401,12 +403,17 @@ h1, h2, h3, h4 {
   font-size: 1.125rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
   margin: 0 auto;
+  display: inline-block;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+  text-decoration: none;
 }
 
 .get-started-button:hover {
-  background: #C0392B;
+  background: linear-gradient(135deg, #d32f2f, #c62828);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.5);
 }
 
 .features-section {
@@ -481,6 +488,7 @@ h1, h2, h3, h4 {
   margin-bottom: 1.5rem;
   font-weight: 600;
   line-height: 1.2;
+  text-align: left;
 }
 
 .footer-description {
@@ -489,12 +497,14 @@ h1, h2, h3, h4 {
   max-width: 300px;
   font-size: 1.1rem;
   line-height: 1.5;
+  text-align: left;
 }
 
 .footer-section ul {
   list-style: none;
   padding: 0;
   margin: 0;
+  text-align: left;
 }
 
 .footer-section ul li {
@@ -507,6 +517,7 @@ h1, h2, h3, h4 {
   cursor: pointer;
   text-decoration: none;
   display: inline-block;
+  text-align: left;
 }
 
 .footer-section ul li:hover .footer-text {
@@ -536,7 +547,7 @@ h1, h2, h3, h4 {
   padding-top: 2rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   color: rgba(255, 255, 255, 0.6);
   font-size: 1.1rem;
@@ -630,10 +641,36 @@ h1, h2, h3, h4 {
   .footer-content {
     grid-template-columns: 1fr;
     text-align: center;
+    gap: 2.5rem;
   }
   
   .footer-description {
     margin: 1rem auto;
+    text-align: center;
+  }
+  
+  .footer-section h4 {
+    text-align: center;
+  }
+  
+  .footer-section ul {
+    text-align: center;
+  }
+  
+  /* Keep logo left-aligned even on mobile */
+  .footer-section:first-child .logo-container {
+    justify-content: flex-start;
+    margin-left: 0;
+    text-align: left;
+  }
+  
+  /* Other footers should be centered */
+  .footer-section:not(:first-child) .logo-container {
+    justify-content: center;
+  }
+  
+  .social-links {
+    justify-content: center;
   }
   
   .footer-bottom {
@@ -688,6 +725,8 @@ h1, h2, h3, h4 {
   align-items: center;
   z-index: 1000;
   backdrop-filter: blur(5px);
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .modal-content {
@@ -695,11 +734,15 @@ h1, h2, h3, h4 {
   border-radius: 1rem;
   width: 90%;
   max-width: 500px;
+  max-height: 90vh;
   padding: 2rem;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   color: white;
   position: relative;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  margin: auto;
 }
 
 .modal-header {
@@ -839,11 +882,37 @@ h1, h2, h3, h4 {
 @media (max-width: 768px) {
   .modal-content {
     padding: 1.5rem;
-    max-width: 90%;
+    max-width: 95%;
+    width: 95%;
   }
   
   .modal-header h2 {
     font-size: 1.5rem;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .action-button {
+    height: auto;
+    padding: 0.75rem 1rem;
+  }
+}
+
+@media (max-height: 700px) {
+  .modal-content {
+    padding: 1rem;
+    max-height: 95vh;
+  }
+  
+  .form-header {
+    margin-bottom: 1rem;
+  }
+  
+  .form-group {
+    margin-bottom: 0.75rem;
   }
 }
 
@@ -852,4 +921,111 @@ h1, h2, h3, h4 {
   height: 40px;
   width: auto;
   margin-right: 10px;
+}
+
+/* User Authentication */
+.user-auth {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-welcome {
+  color: #f0f0f0;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 200px;
+}
+
+.logout-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 14px;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+}
+
+.logout-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.loading-auth {
+  color: #f0f0f0;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+/* When header is scrolled, adjust user auth styles */
+.app-header.scrolled .user-welcome {
+  color: #333;
+}
+
+.app-header.scrolled .logout-button {
+  background: rgba(0, 0, 0, 0.05);
+  color: #333;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.app-header.scrolled .logout-button:hover {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer Watchdog logo with Orbitron font */
+.logo-container {
+  text-align: left;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.logo-container .logo-text {
+  font-family: 'Orbitron', sans-serif;
+  color: #E74C3C;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.orbitron-text {
+  font-family: 'Orbitron', sans-serif;
+  color: #E74C3C;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Footer Watchdog logo specific alignment */
+.footer-section .logo-container {
+  text-align: left;
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.footer-section .logo-container .logo-link {
+  justify-content: flex-start;
+  text-align: left;
+  width: auto;
+  display: inline-block;
+}
+
+.footer-section .logo-text {
+  text-align: left !important;
+  align-items: flex-start !important;
 }
