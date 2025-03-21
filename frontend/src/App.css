@@ -64,6 +64,63 @@
   box-sizing: border-box;
 }
 
+/* More aggressive outline removal for all buttons */
+button,
+.login-button,
+.signup-button,
+.logout-button,
+.get-started-button,
+.action-button,
+.modal-submit-button,
+.cancel-button,
+.menu-button {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: none !important;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+button:focus,
+.login-button:focus,
+.signup-button:focus,
+.logout-button:focus,
+.get-started-button:focus,
+.action-button:focus,
+.modal-submit-button:focus, 
+.cancel-button:focus,
+.menu-button:focus {
+  outline: none !important;
+  outline-offset: 0 !important;
+  outline-width: 0 !important;
+  outline-color: transparent !important;
+  outline-style: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
+  -webkit-focus-ring-color: transparent !important;
+}
+
+/* Specific fix for login button on hover */
+.login-button {
+  /* Override browser focus behavior */
+  outline: none !important;
+  outline-style: none !important; 
+  -webkit-focus-ring-color: transparent !important;
+}
+
+.login-button:hover, 
+.login-button:focus, 
+.login-button:active {
+  outline: 0 !important;
+  outline-style: none !important;
+  -webkit-focus-ring-color: transparent !important;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2) !important;
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 body {
   font-family: 'Inter', Arial, sans-serif;
   background-color: var(--background-color);
@@ -314,12 +371,20 @@ h1, h2, h3, h4 {
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+  outline: none !important;
+  -webkit-focus-ring-color: transparent !important;
 }
 
-.login-button:hover {
+.login-button:hover, 
+.login-button:focus, 
+.login-button:active {
+  outline: 0 !important;
+  outline-style: none !important;
+  -webkit-focus-ring-color: transparent !important;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2) !important;
   background-color: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .signup-button {
@@ -332,6 +397,11 @@ h1, h2, h3, h4 {
   background: linear-gradient(135deg, #d32f2f, #c62828);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(231, 76, 60, 0.5);
+  outline: none;
+}
+
+.signup-button:focus {
+  outline: none;
 }
 
 .logo-link {
@@ -918,7 +988,7 @@ h1, h2, h3, h4 {
 
 /* Add styles for the capitol logo */
 .capitol-logo {
-  height: 40px;
+  height: 55px;
   width: auto;
   margin-right: 10px;
 }
@@ -960,6 +1030,11 @@ h1, h2, h3, h4 {
   border-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+  outline: none;
+}
+
+.logout-button:focus {
+  outline: none;
 }
 
 .loading-auth {

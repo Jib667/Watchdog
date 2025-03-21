@@ -51,6 +51,8 @@ def init_db_schema():
             email TEXT UNIQUE,
             password_hash TEXT,
             full_name TEXT,
+            state TEXT,
+            district TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             is_active BOOLEAN DEFAULT 1
         )
