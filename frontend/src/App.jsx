@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
 import './App.css'
 import capitolImage from './assets/capitol.png' // Import the capitol image
+import donkeyGif from './assets/donkey.gif' // Import donkey mascot
+import elephantGif from './assets/elephant.gif' // Import elephant mascot
 
 // Components
 import Sidebar from './components/Sidebar'
@@ -167,6 +169,14 @@ function App() {
               </div>
             </Link>
           </div>
+          
+          <div className="header-center">
+            <div className="mascot-container">
+              <img src={donkeyGif} alt="Democratic mascot" className="mascot donkey" />
+              <img src={elephantGif} alt="Republican mascot" className="mascot elephant" />
+            </div>
+          </div>
+          
           <div className="nav-buttons">
             {isLoading ? (
               <div className="loading-auth">Loading...</div>

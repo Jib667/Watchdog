@@ -275,6 +275,19 @@ h1, h2, h3, h4 {
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 250px;
+  z-index: 10;
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  margin: 0 15px;
+  overflow: hidden;
+  height: 50px;
 }
 
 .app-title {
@@ -354,6 +367,8 @@ h1, h2, h3, h4 {
 .nav-buttons {
   display: flex;
   gap: 1rem;
+  min-width: 200px;
+  z-index: 10;
 }
 
 .login-button, 
@@ -1103,4 +1118,129 @@ h1, h2, h3, h4 {
 .footer-section .logo-text {
   text-align: left !important;
   align-items: flex-start !important;
+}
+
+/* Political mascots animation */
+.mascot-container {
+  position: relative;
+  width: 100%;
+  height: 50px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mascot {
+  position: absolute;
+  height: 50px;
+  width: auto;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.5));
+}
+
+.donkey {
+  animation: moveDonkey 30s linear infinite;
+  top: 0;
+}
+
+.elephant {
+  animation: moveElephant 30s linear infinite;
+  top: 0;
+}
+
+/* Donkey animation - visible in first half of cycle */
+@keyframes moveDonkey {
+  /* Start hidden at left edge */
+  0% {
+    left: -60px;
+    opacity: 0;
+  }
+  /* Appear and start moving right */
+  3% {
+    left: -60px;
+    opacity: 1;
+    transform: translateY(0px);
+  }
+  /* Some up/down movement while crossing */
+  13% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+  25% {
+    transform: translateY(0px);
+    opacity: 1;
+  }
+  37% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+  /* Reach right edge and disappear */
+  47% {
+    left: 100%;
+    opacity: 1;
+    transform: translateY(0px);
+  }
+  48% {
+    left: 100%;
+    opacity: 0;
+  }
+  /* Stay hidden for elephant's turn */
+  50% {
+    left: -60px;
+    opacity: 0;
+  }
+  100% {
+    left: -60px;
+    opacity: 0;
+  }
+}
+
+/* Elephant animation - visible in second half of cycle */
+@keyframes moveElephant {
+  /* Stay hidden for first half while donkey moves */
+  0% {
+    left: -60px;
+    opacity: 0;
+  }
+  49% {
+    left: -60px;
+    opacity: 0;
+  }
+  /* Appear and start moving right */
+  53% {
+    left: -60px;
+    opacity: 1;
+    transform: translateY(0px);
+  }
+  /* Some up/down movement while crossing */
+  63% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(0px);
+    opacity: 1;
+  }
+  87% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+  /* Reach right edge and disappear */
+  97% {
+    left: 100%;
+    opacity: 1;
+    transform: translateY(0px);
+  }
+  98% {
+    left: 100%;
+    opacity: 0;
+  }
+  /* Return to start position hidden */
+  100% {
+    left: -60px;
+    opacity: 0;
+  }
+}
+
+/* Remove the hover effect since they're always solid now */
+.app-header .mascot {
+  /* No additional rules needed here */
 }
