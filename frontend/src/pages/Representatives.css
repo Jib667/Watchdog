@@ -222,6 +222,7 @@
   max-width: 1400px;
   border-radius: 12px;
   overflow: hidden;
+  position: relative;
 }
 
 .map-container iframe {
@@ -231,6 +232,21 @@
 
 .map-fullsize iframe {
   border-radius: 6px;
+  filter: brightness(1.05);
+}
+
+/* Add overlay for color tinting */
+.map-fullsize::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(120, 120, 255, 0.35); /* Stronger bluish-purple tint */
+  pointer-events: none; /* Allow clicks to pass through */
+  mix-blend-mode: multiply; /* Changed from color to multiply for stronger effect */
+  z-index: 10;
 }
 
 @media (max-width: 768px) {
