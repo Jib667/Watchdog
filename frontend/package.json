@@ -10,10 +10,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-leaflet/core": "^3.0.0",
+    "@types/d3": "^7.4.3",
+    "@types/topojson-client": "^3.1.5",
     "axios": "^1.8.4",
+    "bootstrap": "^5.3.3",
+    "d3": "^7.9.0",
+    "leaflet": "^1.9.4",
     "react": "^19.0.0",
+    "react-bootstrap": "^2.10.9",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.4.0"
+    "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.4.0",
+    "topojson-client": "^3.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

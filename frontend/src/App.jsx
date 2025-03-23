@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
 import './App.css'
 import capitolImage from './assets/capitol.png' // Import the capitol image
 import donkeyGif from './assets/donkey.gif' // Import donkey mascot
@@ -17,6 +17,17 @@ import Senate from './pages/Senate'
 import Contact from './pages/Contact'
 import AdminPage from './pages/AdminPage'
 
+// Location tracker component to update the parent component when location changes
+function LocationTracker({ setCurrentPath }) {
+  const location = useLocation();
+  
+  useEffect(() => {
+    setCurrentPath(location.pathname);
+  }, [location, setCurrentPath]);
+  
+  return null; // This component doesn't render anything
+}
+
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -24,6 +35,7 @@ function App() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPath, setCurrentPath] = useState('/');
   
   // Add debugging for sidebar state
   useEffect(() => {
@@ -128,13 +140,25 @@ function App() {
   };
 
   const toggleSidebar = () => {
-    console.log("Toggle sidebar clicked. Current state:", sidebarOpen);
+    console.log("Toggling sidebar");
     setSidebarOpen(prevState => !prevState);
   };
+
+  // Determine if we should show the mascots
+  const showMascots = currentPath === '/' || currentPath === '/home';
+  
+  // Determine the title to show in the center
+  let centerTitle = '';
+  if (currentPath === '/representatives') {
+    centerTitle = 'The House';
+  } else if (currentPath === '/senate') {
+    centerTitle = 'The Senate';
+  }
 
   return (
     <Router>
       <div className="app">
+        <LocationTracker setCurrentPath={setCurrentPath} />
         <Sidebar 
           isOpen={sidebarOpen} 
           onClose={() => setSidebarOpen(false)} 
@@ -171,10 +195,14 @@ function App() {
           </div>
           
           <div className="header-center">
-            <div className="mascot-container">
-              <img src={donkeyGif} alt="Democratic mascot" className="mascot donkey" />
-              <img src={elephantGif} alt="Republican mascot" className="mascot elephant" />
-            </div>
+            {showMascots ? (
+              <div className="mascot-container">
+                <img src={donkeyGif} alt="Democratic mascot" className="mascot donkey" />
+                <img src={elephantGif} alt="Republican mascot" className="mascot elephant" />
+              </div>
+            ) : centerTitle ? (
+              <h2 className="page-title">{centerTitle}</h2>
+            ) : null}
           </div>
           
           <div className="nav-buttons">

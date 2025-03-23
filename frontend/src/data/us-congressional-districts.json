@@ -1,0 +1,161 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "01",
+        "STATENAME": "Alabama",
+        "CD": "01",
+        "NAME": "Congressional District 1"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-88.2, 32.0], [-87.0, 32.0], [-87.0, 30.5], [-88.2, 30.5], [-88.2, 32.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "01",
+        "STATENAME": "Alabama",
+        "CD": "02",
+        "NAME": "Congressional District 2"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-87.0, 32.0], [-85.5, 32.0], [-85.5, 31.0], [-87.0, 31.0], [-87.0, 32.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "01",
+        "STATENAME": "Alabama",
+        "CD": "03",
+        "NAME": "Congressional District 3"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-85.5, 33.5], [-84.9, 33.5], [-84.9, 32.0], [-85.5, 32.0], [-85.5, 33.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "02",
+        "STATENAME": "Alaska",
+        "CD": "00",
+        "NAME": "Congressional District (at Large)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-170, 70], [-140, 70], [-140, 55], [-170, 55], [-170, 70]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "04",
+        "STATENAME": "Arizona",
+        "CD": "01",
+        "NAME": "Congressional District 1"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-113.0, 37], [-109.0, 37], [-109.0, 34], [-113.0, 34], [-113.0, 37]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "04",
+        "STATENAME": "Arizona",
+        "CD": "02",
+        "NAME": "Congressional District 2"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-111.0, 34], [-109.0, 34], [-109.0, 31.3], [-111.0, 31.3], [-111.0, 34]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "06",
+        "STATENAME": "California",
+        "CD": "01",
+        "NAME": "Congressional District 1"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-124.0, 42], [-120.0, 42], [-120.0, 40], [-124.0, 40], [-124.0, 42]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "06",
+        "STATENAME": "California",
+        "CD": "12",
+        "NAME": "Congressional District 12"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-122.5, 37.8], [-122.3, 37.8], [-122.3, 37.7], [-122.5, 37.7], [-122.5, 37.8]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "12",
+        "STATENAME": "Florida",
+        "CD": "01",
+        "NAME": "Congressional District 1"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-87.6, 31], [-86.0, 31], [-86.0, 30], [-87.6, 30], [-87.6, 31]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "13",
+        "STATENAME": "Georgia",
+        "CD": "01",
+        "NAME": "Congressional District 1"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-82.0, 32], [-81.0, 32], [-81.0, 30.5], [-82.0, 30.5], [-82.0, 32]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "15",
+        "STATENAME": "Hawaii",
+        "CD": "01",
+        "NAME": "Congressional District 1"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-158.0, 21.4], [-157.5, 21.4], [-157.5, 21.0], [-158.0, 21.0], [-158.0, 21.4]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "STATEFP": "36",
+        "STATENAME": "New York",
+        "CD": "01",
+        "NAME": "Congressional District 1"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-73.0, 41.0], [-72.0, 41.0], [-72.0, 40.5], [-73.0, 40.5], [-73.0, 41.0]]]
+      }
+    }
+  ]
+} 

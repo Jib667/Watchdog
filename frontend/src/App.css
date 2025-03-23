@@ -1244,3 +1244,27 @@ h1, h2, h3, h4 {
 .app-header .mascot {
   /* No additional rules needed here */
 }
+
+/* Add styles for the page title in the header center */
+.header-center .page-title {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #E74C3C;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 1px;
+  text-align: center;
+  animation: fadeIn 0.5s ease-in-out;
+  font-family: 'Orbitron', sans-serif;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

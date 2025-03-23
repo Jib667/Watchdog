@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL, ENDPOINTS, buildApiUrl } from '../config';
 
-import '../styles/AdminPage.css';
+import './AdminPage.css';
 
 const AdminPage = () => {
   const navigate = useNavigate();

@@ -79,7 +79,9 @@ const Home = ({ onSignUpClick }) => {
           Watchdog is a non-partisan, open-source platform dedicated to increasing transparency in government. 
           As citizens, we deserve easy access to information about our elected officials. 
           Our goal is to provide accurate, up-to-date data about representatives and senators 
-          to help voters make informed decisions and hold officials accountable to their constituents.
+          to help voters make informed decisions and hold officials accountable to their constituents. With 
+          Watchdog, you can organize with other constituents in your district, petition your representatives 
+          to take action, and talk with other citizens about the issues that matter.
         </p>
         <div className="open-source-note">
           <h3>Open Source</h3>
