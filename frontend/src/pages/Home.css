@@ -1,46 +1,170 @@
 .home-page {
+  position: relative;
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  z-index: 1;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
+/* Capitol Background Styles */
+.capitol-background-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -10; /* Ensure it's behind the navbar and all content */
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.capitol-background-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4); /* Darken overlay */
+  z-index: 0;
+}
+
+.capitol-background {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 15% center; /* Shift image more to the left */
+  opacity: 0.75;
+}
+
+/* Hero Section - repositioned to center alignment */
 .hero-section {
+  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 80vh;
-  text-align: center;
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
+  min-height: 70vh;
+  text-align: center; /* Center-align text */
+  z-index: 2;
+  margin-top: 50px; /* Add some space at the top */
+  padding-top: 2rem; /* Add padding on top */
+  width: 100%;
+}
+
+/* Remove the hero section background panel */
+.hero-section::before {
+  content: none;
 }
 
 .hero-content {
-  max-width: 800px;
+  max-width: 800px; /* Wider content area */
+  position: relative;
+  padding: 2.5rem;
+  z-index: 3;
+  margin-left: auto; /* Center content */
+  margin-right: auto;
 }
 
 .hero-text {
   width: 100%;
-  text-align: center;
+  text-align: center; /* Center-align text */
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: center; /* Center items */
 }
 
 .hero-text h1 {
-  font-size: 2.8rem;
-  margin-bottom: 1.5rem;
-  line-height: 1.2;
+  font-size: 2.75rem;
+  font-weight: 800;
+  margin: 0 0 1.5rem 0;
   color: white;
+  text-align: center;
+  /* More pronounced text shadow with increased blur effect */
+  text-shadow: 
+    0 2px 12px rgba(0, 0, 0, 0.85), 
+    0 0 6px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  position: relative;
+  transition: opacity 0.3s ease;
+}
+
+.hero-text h1.text-changing {
+  opacity: 0.9;
+}
+
+.hero-text .highlight {
+  color: #ff5a4c;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 4px rgba(0, 0, 0, 0.6);
+  font-style: normal;
+}
+
+.hero-text .rotating-word {
+  color: #ff5a4c;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 4px rgba(0, 0, 0, 0.6);
+  display: inline-block;
+  min-width: 130px;
+  text-align: center;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+/* Animation for the hero text when changing words */
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(0.98); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.hero-text h1.text-changing .rotating-word {
+  animation: pulse 0.6s ease;
 }
 
 .hero-description {
-  font-size: 1.2rem;
-  margin-bottom: 2rem;
-  color: rgba(255, 255, 255, 0.9);
-  max-width: 600px;
+  font-size: 1.4rem; /* Larger description text */
+  margin-bottom: 2.5rem;
+  color: rgba(255, 255, 255, 1);
+  max-width: 700px; /* Wider text area */
+  /* More pronounced text shadow with increased blur effect */
+  text-shadow: 
+    0 2px 10px rgba(0, 0, 0, 0.85), 
+    0 0 5px rgba(0, 0, 0, 0.6),
+    0 0 15px rgba(0, 0, 0, 0.4),
+    0 0 25px rgba(0, 0, 0, 0.3);
+  line-height: 1.7;
+  font-weight: 500;
+  text-align: center; /* Center-align text */
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+}
+
+/* Remove the ::before pseudo-element */
+.hero-description::before {
+  content: none;
 }
 
 .highlight {
-  color: #E74C3C;
+  color: #ff5a4c; /* Brighter red for better visibility */
   font-style: italic;
+  font-weight: 700; /* Bolder text */
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 4px rgba(0, 0, 0, 0.6); /* Enhanced text shadow */
+}
+
+/* Add spacing between words in the hero heading - no longer needed with new approach */
+.hero-text h1 span {
+  margin: 0 3px;
+}
+
+/* These are no longer needed with the new approach */
+.rotating-word-container,
+.rotating-word.changing {
+  display: none;
 }
 
 .get-started-button {
@@ -57,6 +181,7 @@
   box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
   text-decoration: none;
   display: inline-block;
+  align-self: center; /* Center the button */
 }
 
 .get-started-button:hover {
@@ -65,16 +190,24 @@
   box-shadow: 0 4px 12px rgba(231, 76, 60, 0.5);
 }
 
+/* Features Section */
 .features-section {
+  position: relative;
   padding: 4rem 0;
+  margin-top: 2rem;
   text-align: center;
+  /* Remove background from features section */
+  background: transparent;
+  z-index: 2;
 }
 
 .features-section h2 {
-  color: white;
-  font-size: 2.5rem;
-  margin-bottom: 3rem;
-  font-weight: 600;
+  color: #ff5a4c; /* Brighter red for better visibility */
+  font-size: 2.8rem; /* Larger font size */
+  margin-bottom: 3.5rem;
+  font-weight: 800; /* Bolder text */
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 4px rgba(0, 0, 0, 0.6); /* Enhanced text shadow */
+  letter-spacing: 0.5px;
 }
 
 .features-grid {
@@ -84,14 +217,15 @@
 }
 
 .feature-card {
-  background: rgba(25, 42, 86, 0.3);
-  backdrop-filter: blur(10px);
+  background: rgba(25, 42, 86, 0.8); /* Darker background for better contrast */
+  backdrop-filter: blur(15px); /* Enhanced blur effect */
+  -webkit-backdrop-filter: blur(15px);
   border-radius: 1rem;
-  padding: 2rem;
+  padding: 2.5rem; /* More padding */
   color: white;
   transition: transform 0.3s, box-shadow 0.3s;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25); /* More visible border */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); /* Stronger shadow */
 }
 
 .feature-card:hover {
@@ -101,35 +235,45 @@
 }
 
 .feature-card h3 {
-  color: #E74C3C;
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
-  font-weight: 600;
+  color: #ff5a4c; /* Brighter red for better visibility */
+  margin-bottom: 1.2rem;
+  font-size: 1.6rem; /* Larger font size */
+  font-weight: 700; /* Bolder text */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); /* Enhanced text shadow */
 }
 
 .feature-card p {
-  line-height: 1.6;
-  font-size: 1.1rem;
+  line-height: 1.7;
+  font-size: 1.15rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); /* Enhanced text shadow */
+  font-weight: 400; /* Slightly bolder text */
 }
 
+/* About Section */
 .about-section {
-  background: rgba(25, 42, 86, 0.3);
-  backdrop-filter: blur(10px);
-  padding: 3rem;
+  position: relative;
+  background: rgba(25, 42, 86, 0.85);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  padding: 3.5rem;
   border-radius: 1rem;
   margin: 4rem 0;
   color: white;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+  z-index: 2;
 }
 
 .about-section h2 {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.8rem;
   color: white;
   position: relative;
   display: inline-block;
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.8rem;
+  font-size: 2.4rem;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .about-section h2::after {
@@ -138,19 +282,21 @@
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 80px;
-  height: 3px;
-  background: linear-gradient(135deg, #E74C3C, #d32f2f);
-  border-radius: 3px;
+  width: 100px;
+  height: 4px;
+  background: linear-gradient(135deg, #ff5a4c, #d32f2f);
+  border-radius: 4px;
 }
 
 .about-section p {
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.7;
-  margin-bottom: 2rem;
+  color: rgba(255, 255, 255, 1);
+  line-height: 1.8;
+  margin-bottom: 2.5rem;
+  font-size: 1.15rem;
   max-width: 800px;
   margin-left: auto;
   margin-right: auto;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .open-source-note {
@@ -174,10 +320,11 @@
 }
 
 .open-source-note h3 {
-  color: #E74C3C;
-  margin-bottom: 1.2rem;
-  font-weight: 600;
-  font-size: 1.5rem;
+  color: #ff5a4c;
+  margin-bottom: 1.4rem;
+  font-weight: 700;
+  font-size: 1.7rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .contribute-links {
@@ -188,48 +335,184 @@
 }
 
 .contribute-link {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.15);
   color: white;
   text-decoration: none;
-  padding: 0.7rem 1.5rem;
+  padding: 0.8rem 1.8rem;
   border-radius: 2rem;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 1.05rem;
   transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   min-width: 140px;
   text-align: center;
 }
 
 .contribute-link:hover {
-  background-color: rgba(231, 76, 60, 0.8);
-  border-color: rgba(231, 76, 60, 0.9);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+  background-color: rgba(255, 76, 60, 0.8);
+  border-color: rgba(255, 76, 60, 0.9);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(231, 76, 60, 0.4);
   color: white;
 }
 
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .hero-section {
+    padding-right: 5%;
+    padding-top: 4%;
+    margin-top: 70px;
+  }
+  
+  .capitol-background {
+    object-position: 20% center;
+  }
+}
+
 @media (max-width: 1024px) {
+  .hero-section {
+    padding-right: 3%;
+    padding-top: 3%;
+    margin-top: 60px;
+  }
+  
+  .capitol-background {
+    object-position: 25% center;
+  }
+  
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  
+  .hero-text h1 {
+    font-size: 2.6rem;
+  }
+  
+  .features-section h2 {
+    font-size: 2.4rem;
   }
 }
 
 @media (max-width: 768px) {
+  .hero-section {
+    justify-content: center;
+    align-items: center; /* Reset alignment to center for mobile */
+    text-align: center;
+    padding-right: 0;
+    padding-top: 0;
+    margin-top: 50px;
+  }
+  
+  .hero-content {
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1rem;
+  }
+  
+  .hero-text {
+    text-align: center;
+    align-items: center;
+  }
+  
   .hero-text h1 {
     font-size: 2.2rem;
+    line-height: 1.3;
+  }
+  
+  .hero-text h1 > span {
+    height: 50px; /* Match the rotating word container height on tablets */
   }
   
   .hero-description {
-    font-size: 1rem;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    font-size: 1.15rem;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.6);
+  }
+  
+  .get-started-button {
+    align-self: center;
+  }
+  
+  .capitol-background {
+    object-position: 35% center;
+  }
+  
+  .features-section h2 {
+    font-size: 2.2rem;
   }
   
   .features-grid {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .feature-card {
+    padding: 2rem;
+  }
+  
+  .about-section {
+    padding: 2.5rem 1.5rem;
+  }
+  
+  .about-section h2 {
+    font-size: 2.2rem;
   }
   
   .contribute-links {
     flex-direction: column;
     gap: 0.8rem;
+  }
+  
+  .rotating-word-container {
+    width: 170px; /* Wider to prevent cutoff on tablets */
+    height: 50px;
+    vertical-align: middle;
+  }
+  
+  .hero-text .rotating-word {
+    min-width: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-text h1 {
+    font-size: 1.8rem;
+    line-height: 1.2;
+  }
+  
+  .hero-text h1 > span {
+    height: 40px; /* Match the rotating word container height on mobile */
+  }
+  
+  .hero-description {
+    font-size: 1.05rem;
+  }
+  
+  .features-section h2 {
+    font-size: 1.9rem;
+  }
+  
+  .feature-card h3 {
+    font-size: 1.4rem;
+  }
+  
+  .get-started-button {
+    padding: 0.9rem 1.8rem;
+    font-size: 1rem;
+  }
+  
+  .rotating-word-container {
+    width: 150px; /* Wider to prevent cutoff on phones */
+    height: 40px;
+    vertical-align: middle;
+  }
+  
+  .hero-text .rotating-word {
+    min-width: 80px;
+    display: inline;
   }
 } 

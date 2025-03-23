@@ -1,15 +1,52 @@
 import './Home.css';
-import { useContext } from 'react';
+import { useContext, useEffect, useState, useRef } from 'react';
+import capitolBackground from '../assets/capitol_background.png';
 
 const Home = ({ onSignUpClick }) => {
+  // Updated rotating words - using 'organize', 'converse', 'advocate', 'assemble'
+  const [rotatingWord, setRotatingWord] = useState('organize');
+  const [isChanging, setIsChanging] = useState(false);
+  // Updated list without 'petition'
+  const rotatingWords = ['assemble', 'advocate', 'converse', 'organize'];
+  const currentIndex = useRef(0);
+  
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setIsChanging(true);
+      setTimeout(() => {
+        currentIndex.current = (currentIndex.current + 1) % rotatingWords.length;
+        setRotatingWord(rotatingWords[currentIndex.current]);
+        
+        // Give the animation time to show the new word
+        setTimeout(() => {
+          setIsChanging(false);
+        }, 100);
+      }, 300); // Delay word change to coincide with animation
+    }, 3000); // Change word every 3 seconds
+    
+    return () => clearInterval(intervalId);
+  }, []);
+  
+  // Function to create the hero text with appropriate styling
+  const renderHeroText = () => {
+    return (
+      <h1 className={isChanging ? 'text-changing' : ''}>
+        Monitor your <span className="highlight">representatives</span> and{' '}
+        <span className="rotating-word">{rotatingWord}</span> with fellow citizens
+      </h1>
+    );
+  };
+  
   return (
     <div className="home-page">
+      <div className="capitol-background-container">
+        <img src={capitolBackground} alt="Capitol Building" className="capitol-background" />
+      </div>
+      
       <section className="hero-section">
         <div className="hero-content">
           <div className="hero-text">
-            <h1>
-              Monitor your <span className="highlight">representatives</span> and make <span className="highlight">informed</span> decisions
-            </h1>
+            {renderHeroText()}
             <p className="hero-description">
               Free, open-source software providing transparency and accountability in government
             </p>
