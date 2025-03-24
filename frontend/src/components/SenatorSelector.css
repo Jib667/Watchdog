@@ -1,0 +1,62 @@
+.senator-container {
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.senator-selector {
+  max-width: 900px;
+  margin: 0 auto;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.senator-tabs-container {
+  margin-bottom: 20px;
+}
+
+.senator-tabs {
+  border-bottom: 2px solid #dee2e6;
+  display: flex;
+  justify-content: center;
+}
+
+.senator-tabs .nav-link {
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #6c757d;
+  padding: 12px 24px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.senator-tabs .nav-link.active {
+  color: #343a40;
+  border-bottom-color: #E74C3C;
+  background-color: transparent;
+}
+
+.senator-tabs .nav-link:hover:not(.active) {
+  border-bottom-color: #dee2e6;
+}
+
+.senator-tab-title {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.senator-tab-party {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 2px;
+}
+
+@media (max-width: 576px) {
+  .senator-tabs .nav-link {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+  }
+} 

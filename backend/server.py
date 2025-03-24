@@ -737,6 +737,113 @@ def get_saved_bills(current_user: dict = Depends(get_current_user)):
     
     return {"bills": bills}
 
+@app.get("/api/representatives/member")
+def get_member_details(state: str, district: Optional[str] = None):
+    """Get details for a specific member by state and district"""
+    try:
+        # Current congress number (118 for 2023-2024)
+        congress = 118
+        
+        # Determine chamber based on whether district is provided
+        chamber = "house" if district else "senate"
+        
+        # Make API request
+        data = make_congress_api_request(f"/congress/{congress}/members", {
+            "chamber": chamber,
+            "state": state
+        })
+        
+        # Find the matching member
+        member = None
+        for m in data.get("members", []):
+            if chamber == "house":
+                if m.get("district") == district:
+                    member = m
+                    break
+            else:
+                member = m  # For senate, just take the first senator
+                break
+        
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        # Get additional member details
+        member_id = member.get("bioguideId")
+        if member_id:
+            member_details = make_congress_api_request(f"/member/{member_id}")
+            member.update(member_details.get("member", {}))
+        
+        return {
+            "id": member.get("bioguideId"),
+            "name": f"{member.get('lastName', '')}, {member.get('firstName', '')}",
+            "state": member.get("state"),
+            "district": member.get("district"),
+            "party": member.get("party"),
+            "chamber": chamber,
+            "biography": member.get("biography"),
+            "imageUrl": member.get("imageUrl"),
+            "url": member.get("url")
+        }
+    except Exception as e:
+        logger.error(f"Error fetching member details: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/members/{member_id}/sponsored")
+def get_member_sponsored_bills(member_id: str):
+    """Get bills sponsored by a specific member"""
+    try:
+        # Current congress number (118 for 2023-2024)
+        congress = 118
+        
+        # Make API request
+        data = make_congress_api_request(f"/member/{member_id}/sponsored", {
+            "congress": congress
+        })
+        
+        # Extract and normalize bills
+        bills = []
+        for bill in data.get("bills", []):
+            bills.append({
+                "bill_id": bill.get("billNumber"),
+                "title": bill.get("title"),
+                "introduced_date": bill.get("introducedDate"),
+                "status": bill.get("latestAction", {}).get("text", "Unknown"),
+                "url": bill.get("url")
+            })
+        
+        return {"bills": bills}
+    except Exception as e:
+        logger.error(f"Error fetching member sponsored bills: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/members/{member_id}/cosponsored")
+def get_member_cosponsored_bills(member_id: str):
+    """Get bills cosponsored by a specific member"""
+    try:
+        # Current congress number (118 for 2023-2024)
+        congress = 118
+        
+        # Make API request
+        data = make_congress_api_request(f"/member/{member_id}/cosponsored", {
+            "congress": congress
+        })
+        
+        # Extract and normalize bills
+        bills = []
+        for bill in data.get("bills", []):
+            bills.append({
+                "bill_id": bill.get("billNumber"),
+                "title": bill.get("title"),
+                "introduced_date": bill.get("introducedDate"),
+                "status": bill.get("latestAction", {}).get("text", "Unknown"),
+                "url": bill.get("url")
+            })
+        
+        return {"bills": bills}
+    except Exception as e:
+        logger.error(f"Error fetching member cosponsored bills: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Run the server if executed directly
 if __name__ == "__main__":
     import uvicorn

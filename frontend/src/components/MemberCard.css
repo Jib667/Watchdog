@@ -1,0 +1,100 @@
+.member-card {
+  max-width: 900px;
+  margin: 0 auto;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1000;
+}
+
+.member-card .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #e9ecef;
+  padding: 15px 20px;
+}
+
+.member-card h3 {
+  margin-bottom: 0;
+  font-weight: 600;
+  color: #343a40;
+}
+
+.member-subtitle {
+  color: #6c757d;
+  font-size: 1rem;
+}
+
+.member-image-container {
+  width: 150px;
+  height: 180px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 5px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.member-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.member-bio {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #495057;
+}
+
+.bill-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.bill-item {
+  padding: 15px;
+  border-left: 3px solid #dee2e6;
+}
+
+.bill-item:hover {
+  background-color: #f8f9fa;
+  border-left-color: #6c757d;
+}
+
+.bill-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.bill-title strong {
+  font-weight: 600;
+  color: #343a40;
+}
+
+.bill-list .badge {
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .member-image-container {
+    width: 120px;
+    height: 150px;
+    margin-bottom: 15px;
+  }
+  
+  .bill-title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .bill-title .badge {
+    margin-top: 5px;
+  }
+} 
