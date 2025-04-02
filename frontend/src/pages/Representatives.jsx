@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Container } from 'react-bootstrap';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
-import { fetchRepresentativesByState } from '../utils/api';
-import MemberCard from '../components/MemberCard';
+import MemberCard from '../components/MemberCard'; // Import the MemberCard component
+// Removed import for local data
+// import { getRepresentativesByState } from '../data/representatives';
 import 'leaflet/dist/leaflet.css';
 import './Representatives.css';
 
 const Representatives = () => {
   const [selectedState, setSelectedState] = useState(null);
-  const [representatives, setRepresentatives] = useState(null);
-  const [selectedMember, setSelectedMember] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [stateData, setStateData] = useState(null); // GeoJSON for states
+  const [allRepresentatives, setAllRepresentatives] = useState([]); // Holds fetched data
+  // Removed 'members' state as it's not strictly needed now
   const [error, setError] = useState(null);
-  const [stateData, setStateData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch state data
+  // State for the modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+
+  // Fetch state GeoJSON data
   useEffect(() => {
     const fetchStateData = async () => {
       try {
@@ -30,28 +35,49 @@ const Representatives = () => {
     fetchStateData();
   }, []);
 
-  // Handle state selection
-  const handleStateClick = async (event) => {
-    const { properties } = event.layer;
-    if (!properties) return;
+  // Fetch representatives data from backend API
+  useEffect(() => {
+    const fetchRepsData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('/api/congress/static/representatives');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setAllRepresentatives(data);
+      } catch (err) {
+        console.error('Error fetching representatives data:', err);
+        setError('Failed to load representatives data. Please try again later.');
+        setAllRepresentatives([]); // Ensure it's an array even on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    const state = properties.postal;
-    console.log('State clicked:', state);
-    setSelectedState(state);
-    setSelectedMember(null);
-    setError(null);
-    setLoading(true);
+    fetchRepsData();
+  }, []); // Runs once on component mount
 
-    try {
-      const repsData = await fetchRepresentativesByState(state);
-      console.log('Received representatives data:', repsData);
-      setRepresentatives(repsData);
-    } catch (err) {
-      console.error('Error fetching member data:', err);
-      setError('Failed to load member information. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
+  // Function to get representatives for a specific state from the fetched data
+  const getRepresentativesByState = (stateName) => {
+    if (!stateName || isLoading || error) return [];
+    return allRepresentatives.filter(rep => rep.state.toLowerCase() === stateName.toLowerCase());
+  };
+
+  // Function to open the modal with selected member data
+  const handleMemberClick = (memberData) => {
+    setSelectedMember(memberData);
+    setIsModalOpen(true);
+  };
+
+  // Handle state selection (now just updates selected state for styling)
+  const handleStateClick = (event) => {
+    const feature = event.layer.feature; // Access feature from layer
+    if (!feature || !feature.properties) return;
+    const stateName = feature.properties.NAME;
+    setSelectedState(stateName);
+    // No longer need to setMembers here as popup does filtering
   };
 
   // Style function for the GeoJSON layer
@@ -59,7 +85,7 @@ const Representatives = () => {
     const state = feature.properties.postal;
     const isSelected = state === selectedState;
     return {
-      fillColor: isSelected ? '#D69E2E' : '#F6AD55', // Yellow/brown colors
+      fillColor: isSelected ? '#D69E2E' : '#F6AD55',
       weight: isSelected ? 2 : 1,
       opacity: 1,
       color: isSelected ? '#B7791F' : '#DD6B20',
@@ -68,37 +94,65 @@ const Representatives = () => {
     };
   };
 
-  const onEachFeature = (feature, layer) => {
-    layer.on({
-      mouseover: (e) => {
-        const layer = e.target;
-        layer.setStyle({
-          fillOpacity: 0.3,
-          weight: 3
-        });
-      },
-      mouseout: (e) => {
-        const layer = e.target;
-        layer.setStyle(style(feature));
-      },
-      click: handleStateClick
+  // Create popup content
+  const createPopupContent = (stateName) => {
+    // Filter representatives for the current state
+    const stateMembers = getRepresentativesByState(stateName);
+
+    // Check for errors first
+    if (error) return `Error: ${error}`;
+    
+    // If still loading, show loading message
+    if (isLoading) return 'Loading representatives...'; 
+    
+    // If loading is done and there are no members, show message
+    if (stateMembers.length === 0) {
+      return `<div class="popup-content">No representatives found for ${stateName}.</div>`;
+    }
+
+    // Group representatives by district
+    const representativesByDistrict = stateMembers.reduce((acc, rep) => {
+      const district = rep.district || 'Unknown District';
+      if (!acc[district]) {
+        acc[district] = [];
+      }
+      acc[district].push(rep);
+      return acc;
+    }, {});
+
+    // Generate HTML string for the popup
+    // NOTE: Using dangerouslySetInnerHTML is generally discouraged in React,
+    // but for complex Leaflet popups generated dynamically, it's often the
+    // most straightforward way. Attaching React events inside this HTML is complex.
+    // We will attach simple onclick handlers that call a globally accessible function
+    // or manage clicks via event delegation if needed. For now, let's try simple onclick.
+
+    // Make handleMemberClick globally accessible (or use event delegation)
+    // TEMPORARY HACK: Attach to window. This is not ideal for larger apps.
+    window.handleRepClick = handleMemberClick; 
+
+    let popupHtml = `<div class="popup-content"><h3>${stateName} Representatives</h3>`;
+
+    Object.entries(representativesByDistrict).forEach(([district, reps]) => {
+      popupHtml += `<div class="popup-district-group"><h4>District ${district}</h4>`;
+      reps.forEach(rep => {
+        // Ensure rep data is properly stringified for the onclick attribute
+        const repJsonString = JSON.stringify(rep).replace(/'/g, "\\'").replace(/"/g, '\'');
+        popupHtml += `
+          <div 
+             class="popup-member-item"
+             onclick='window.handleRepClick(${repJsonString})'
+          >
+             <span class="popup-member-name">${rep.name}</span>
+             <span class="popup-member-party">(${rep.party ? rep.party.charAt(0) : 'U'})</span>
+          </div>
+        `;
+      });
+      popupHtml += `</div>`;
     });
 
-    // Add state abbreviation label
-    const state = feature.properties.postal;
-    
-    // Create a div element for the label
-    const label = document.createElement('div');
-    label.className = 'state-label';
-    label.textContent = state;
-    
-    // Add the label to the map
-    layer.bindTooltip(label, {
-      permanent: true,
-      direction: 'center',
-      className: 'state-label-tooltip',
-      offset: [0, 0]
-    });
+    popupHtml += `</div>`;
+    return popupHtml;
   };
 
   return (
@@ -127,50 +181,40 @@ const Representatives = () => {
             <GeoJSON
               data={stateData}
               style={style}
-              onEachFeature={onEachFeature}
+              onEachFeature={(feature, layer) => {
+                const stateName = feature.properties.NAME;
+                // Bind popup content dynamically
+                layer.bindPopup(() => createPopupContent(stateName), { 
+                    minWidth: 250, // Adjust popup size
+                    maxHeight: 300
+                });
+
+                layer.on({
+                  click: handleStateClick,
+                  mouseover: (e) => {
+                    const layer = e.target;
+                    layer.setStyle({
+                      fillOpacity: 0.6,
+                      weight: 2
+                    });
+                  },
+                  mouseout: (e) => {
+                    const layer = e.target;
+                    layer.setStyle(style(feature));
+                  }
+                });
+              }}
             />
           )}
         </MapContainer>
       </div>
-
-      {selectedState && (
-        <div className="member-card-container">
-          {loading ? (
-            <div className="text-center p-4">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-              <p className="mt-2">Loading member information...</p>
-            </div>
-          ) : error ? (
-            <div className="alert alert-danger">{error}</div>
-          ) : representatives ? (
-            <div className="representatives-list">
-              <h3 className="text-center mb-3">Representatives from {selectedState}</h3>
-              <div className="d-flex flex-wrap justify-content-center gap-3">
-                {representatives.map((rep) => (
-                  <div 
-                    key={rep.id} 
-                    className={`representative-option ${selectedMember?.id === rep.id ? 'selected' : ''}`}
-                    onClick={() => setSelectedMember(rep)}
-                  >
-                    <h4>District {rep.district}</h4>
-                    <h5>{rep.name}</h5>
-                    <p className="mb-0">{rep.party}</p>
-                  </div>
-                ))}
-              </div>
-              {selectedMember && (
-                <div className="mt-4">
-                  <MemberCard 
-                    member={selectedMember}
-                    onClose={() => setSelectedMember(null)}
-                  />
-                </div>
-              )}
-            </div>
-          ) : null}
-        </div>
+      
+      {/* Render the MemberCard modal conditionally */}
+      {isModalOpen && selectedMember && (
+        <MemberCard 
+          member={selectedMember} 
+          onClose={() => setIsModalOpen(false)} 
+        />
       )}
     </Container>
   );

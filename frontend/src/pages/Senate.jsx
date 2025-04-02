@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Container } from 'react-bootstrap';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
-import { fetchSenatorsByState } from '../utils/api';
-import MemberCard from '../components/MemberCard';
+import MemberCard from '../components/MemberCard'; // Import the MemberCard component
+// Removed import for local data
+// import { getSenatorsByState } from '../data/senators';
 import 'leaflet/dist/leaflet.css';
 import './Senate.css';
 
 const Senate = () => {
   const [selectedState, setSelectedState] = useState(null);
-  const [senators, setSenators] = useState(null);
-  const [selectedSenator, setSelectedSenator] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [stateData, setStateData] = useState(null); // GeoJSON for states
+  const [allSenators, setAllSenators] = useState([]); // Holds fetched data
+  // Removed 'members' state
   const [error, setError] = useState(null);
-  const [stateData, setStateData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch state data
+  // State for the modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+
+  // Fetch state GeoJSON data
   useEffect(() => {
     const fetchStateData = async () => {
       try {
@@ -30,29 +35,49 @@ const Senate = () => {
     fetchStateData();
   }, []);
 
-  // Handle state selection
-  const handleStateClick = async (event) => {
-    const { properties } = event.layer;
-    if (!properties) return;
+  // Fetch senators data from backend API
+  useEffect(() => {
+    const fetchSenatorsData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('/api/congress/static/senators');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setAllSenators(data);
+      } catch (err) {
+        console.error('Error fetching senators data:', err);
+        setError('Failed to load senators data. Please try again later.');
+        setAllSenators([]); // Ensure it's an array even on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    const state = properties.STATE_ABBR;
-    console.log('State clicked:', state);
-    setSelectedState(state);
-    setSenators(null);
-    setSelectedSenator(null);
-    setError(null);
-    setLoading(true);
+    fetchSenatorsData();
+  }, []); // Runs once on component mount
 
-    try {
-      const senatorData = await fetchSenatorsByState(state);
-      console.log('Received senator data:', senatorData);
-      setSenators(senatorData);
-    } catch (err) {
-      console.error('Error fetching senator data:', err);
-      setError('Failed to load senator information. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
+  // Function to get senators for a specific state from the fetched data
+  const getSenatorsByState = (stateName) => {
+    if (!stateName || isLoading || error) return [];
+    return allSenators.filter(sen => sen.state.toLowerCase() === stateName.toLowerCase());
+  };
+
+  // Function to open the modal with selected member data
+  const handleMemberClick = (memberData) => {
+    setSelectedMember(memberData);
+    setIsModalOpen(true);
+  };
+
+  // Handle state selection (now just updates selected state for styling)
+  const handleStateClick = (event) => {
+    const feature = event.layer.feature; // Access feature from layer
+    if (!feature || !feature.properties) return;
+    const stateName = feature.properties.NAME;
+    setSelectedState(stateName);
+    // No longer need to setMembers here
   };
 
   // Style function for the GeoJSON layer
@@ -60,13 +85,49 @@ const Senate = () => {
     const state = feature.properties.postal;
     const isSelected = state === selectedState;
     return {
-      fillColor: isSelected ? '#6B46C1' : '#9F7AEA', // Purple colors
+      fillColor: isSelected ? '#6B46C1' : '#9F7AEA',
       weight: isSelected ? 2 : 1,
       opacity: 1,
       color: isSelected ? '#553C9A' : '#805AD5',
-      dashArray: '3',  // Keep dashed effect
+      dashArray: '3',
       fillOpacity: isSelected ? 0.4 : 0.1
     };
+  };
+
+  // Create popup content
+  const createPopupContent = (stateName) => {
+    const stateMembers = getSenatorsByState(stateName);
+
+    // Check for errors first
+    if (error) return `Error: ${error}`;
+    
+    // If still loading, show loading message
+    if (isLoading) return 'Loading senators...';
+    
+    // If loading is done and there are no members, show message
+    if (stateMembers.length === 0) {
+      return `<div class="popup-content">No senators found for ${stateName}.</div>`;
+    }
+
+    // Make handleMemberClick globally accessible (or use event delegation)
+    // TEMPORARY HACK: Attach to window. This is not ideal for larger apps.
+    window.handleSenClick = handleMemberClick;
+
+    let popupHtml = `<div class="popup-content"><h3>${stateName} Senators</h3>`;
+    stateMembers.forEach(sen => {
+      const senJsonString = JSON.stringify(sen).replace(/'/g, "\\'").replace(/"/g, '\'');
+      popupHtml += `
+        <div 
+           class="popup-member-item"
+           onclick='window.handleSenClick(${senJsonString})'
+        >
+           <span class="popup-member-name">${sen.name}</span>
+           <span class="popup-member-party">(${sen.party ? sen.party.charAt(0) : 'U'})</span>
+        </div>
+      `;
+    });
+    popupHtml += `</div>`;
+    return popupHtml;
   };
 
   return (
@@ -96,6 +157,13 @@ const Senate = () => {
               data={stateData}
               style={style}
               onEachFeature={(feature, layer) => {
+                const stateName = feature.properties.NAME;
+                // Bind popup content dynamically
+                layer.bindPopup(() => createPopupContent(stateName), {
+                    minWidth: 250,
+                    maxHeight: 300
+                });
+
                 layer.on({
                   click: handleStateClick,
                   mouseover: (e) => {
@@ -116,43 +184,12 @@ const Senate = () => {
         </MapContainer>
       </div>
 
-      {selectedState && (
-        <div className="member-card-container">
-          {loading ? (
-            <div className="text-center p-4">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-              <p className="mt-2">Loading senator information...</p>
-            </div>
-          ) : error ? (
-            <div className="alert alert-danger">{error}</div>
-          ) : senators ? (
-            <div className="senators-list">
-              <h3 className="text-center mb-3">Senators from {selectedState}</h3>
-              <div className="d-flex justify-content-center gap-3">
-                {senators.map((senator) => (
-                  <div 
-                    key={senator.id} 
-                    className={`senator-option ${selectedSenator?.id === senator.id ? 'selected' : ''}`}
-                    onClick={() => setSelectedSenator(senator)}
-                  >
-                    <h4>{senator.name}</h4>
-                    <p className="mb-0">{senator.party}</p>
-                  </div>
-                ))}
-              </div>
-              {selectedSenator && (
-                <div className="mt-4">
-                  <MemberCard 
-                    member={selectedSenator}
-                    onClose={() => setSelectedSenator(null)}
-                  />
-                </div>
-              )}
-            </div>
-          ) : null}
-        </div>
+      {/* Render the MemberCard modal conditionally */}
+      {isModalOpen && selectedMember && (
+        <MemberCard 
+          member={selectedMember} 
+          onClose={() => setIsModalOpen(false)} 
+        />
       )}
     </Container>
   );

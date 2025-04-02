@@ -140,7 +140,6 @@ const SignUp = ({ onClose }) => {
       username: formData.username,
       email: formData.email,
       password: formData.password,
-      full_name: formData.name,
       state: formData.state,
       district: formData.district
     };
@@ -149,8 +148,8 @@ const SignUp = ({ onClose }) => {
     
     try {
       // Make actual API call to backend
-      // Ensure we're using the relative URL to use the proxy
-      const response = await fetch('/api/auth/register', {
+      // Corrected endpoint to /api/users/register
+      const response = await fetch('/api/users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
