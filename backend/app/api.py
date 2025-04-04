@@ -17,10 +17,11 @@ from .core import (
     verify_password,
     get_password_hash,
     verify_token,
-    representatives as static_reps,
-    senators as static_sens,
+    ALL_REPRESENTATIVES as static_reps,
+    ALL_SENATORS as static_sens,
     find_representative,
-    find_senators
+    find_senators,
+    find_member_by_id
 )
 from .db import get_db_connection, Token, TokenData, User, UserCreate, UserInDB
 
