@@ -132,20 +132,28 @@ const Senate = () => {
 
     let popupHtml = `<div class="popup-content"><h3>${stateName} Senators</h3>`;
     stateMembers.forEach(sen => {
-      // Pass only the bioguide_id (as a string) in the onclick handler
-      const bioguideId = sen.bioguide_id || ''; // Ensure we have an ID
-      if (bioguideId) { // Only add items with an ID
+      const bioguideId = sen.bioguide_id || ''; 
+      const partyLower = (sen.party || '').toLowerCase();
+      let partyClass = '';
+      if (partyLower.includes('democrat')) {
+        partyClass = 'party-democrat';
+      } else if (partyLower.includes('republican')) {
+        partyClass = 'party-republican';
+      } else if (partyLower.includes('independent')) {
+        partyClass = 'party-independent';
+      }
+
+      if (bioguideId) { 
            popupHtml += `
              <div 
                 class="popup-member-item"
                 onclick='window.handleSenClick("${bioguideId}")'
              >
-                <span class="popup-member-name">${sen.name}</span>
+                <span class="popup-member-name ${partyClass}">${sen.name}</span>
                 <span class="popup-member-party">(${sen.party ? sen.party.charAt(0) : 'U'})</span>
              </div>
            `;
        } else {
-             // Optionally log or display senators without IDs differently
              console.warn("Senator missing bioguide_id:", sen.name);
        }
     });

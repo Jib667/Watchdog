@@ -542,4 +542,67 @@
   line-height: 1.4;
   max-height: 250px; /* Limit popup height */
   overflow-y: auto;
+}
+
+/* Styles for Leaflet popup member names */
+.leaflet-popup-content .popup-member-name.party-democrat {
+  color: blue !important; /* Or your preferred shade */
+  font-weight: bold;
+}
+.leaflet-popup-content .popup-member-name.party-republican {
+  color: red !important; /* Or your preferred shade */
+  font-weight: bold;
+}
+.leaflet-popup-content .popup-member-name.party-independent {
+  color: purple !important; /* Or your preferred shade */
+  font-weight: bold;
+}
+
+/* Style for the popup member item itself */
+.leaflet-popup-content .popup-member-item {
+  display: block; /* Ensure items are block level for padding/hover */
+  cursor: pointer;
+  padding: 3px 5px; /* Add some padding */
+  margin: 2px 0; /* Add vertical spacing */
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+.leaflet-popup-content .popup-member-item:hover {
+   background-color: #f0f0f0; /* Light background on hover */
+}
+
+/* Keep party initial color */
+.leaflet-popup-content .popup-member-party {
+  color: #555;
+  margin-left: 5px;
+  font-size: 0.9em;
+}
+
+/* --- Popup Member Name Colors (Re-applied with !important) --- */
+.leaflet-popup-content .popup-member-name.party-democrat {
+  color: #007bff !important; /* Blue */
+  font-weight: bold;
+}
+
+.leaflet-popup-content .popup-member-name.party-republican {
+  color: #dc3545 !important; /* Red */
+  font-weight: bold;
+}
+
+.leaflet-popup-content .popup-member-name.party-independent {
+  color: #6f42c1 !important; /* Purple */
+  font-weight: bold;
+}
+
+.leaflet-popup-content .popup-member-item {
+  display: block;
+  padding: 5px 8px;
+  margin-bottom: 3px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.leaflet-popup-content .popup-member-item:hover {
+  background-color: #f0f0f0;
 } 

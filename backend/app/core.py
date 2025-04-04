@@ -210,7 +210,7 @@ def process_legislators(raw_data: List[Dict[str, Any]]) -> Dict[str, List[Dict[s
                 "state": state_name,
                 "party": current_term.get('party'),
                 "website": website,
-                "image_url": f"/static/images/congress/{_generate_image_filename(full_name)}", # Assumes images are named consistently
+                "image_url": f"/static/images/{_generate_image_filename(full_name)}",
                 "phone": phone,
                 "office_address": office,
                 "contact_form": contact_form,

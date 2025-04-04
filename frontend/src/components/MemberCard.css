@@ -196,4 +196,17 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* --- Member Name Party Colors --- */
+.member-card-name.party-democrat {
+  color: #007bff; /* Blue */
+}
+
+.member-card-name.party-republican {
+  color: #dc3545; /* Red */
+}
+
+.member-card-name.party-independent {
+  color: #6f42c1; /* Purple */
 } 

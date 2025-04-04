@@ -143,20 +143,28 @@ const Representatives = () => {
     Object.entries(representativesByDistrict).forEach(([district, reps]) => {
       popupHtml += `<div class="popup-district-group"><h4>District ${district}</h4>`;
       reps.forEach(rep => {
-        // Pass only the bioguide_id (as a string) in the onclick handler
-        const bioguideId = rep.bioguide_id || ''; // Ensure we have an ID
-        if (bioguideId) { // Only add items with an ID
+        const bioguideId = rep.bioguide_id || ''; 
+        const partyLower = (rep.party || '').toLowerCase();
+        let partyClass = '';
+        if (partyLower.includes('democrat')) {
+          partyClass = 'party-democrat';
+        } else if (partyLower.includes('republican')) {
+          partyClass = 'party-republican';
+        } else if (partyLower.includes('independent')) {
+          partyClass = 'party-independent';
+        }
+
+        if (bioguideId) { 
              popupHtml += `
                <div 
                   class="popup-member-item"
                   onclick='window.handleRepClick("${bioguideId}")' 
                >
-                  <span class="popup-member-name">${rep.name}</span>
+                  <span class="popup-member-name ${partyClass}">${rep.name}</span>
                   <span class="popup-member-party">(${rep.party ? rep.party.charAt(0) : 'U'})</span>
                </div>
              `;
         } else {
-             // Optionally log or display reps without IDs differently
              console.warn("Representative missing bioguide_id:", rep.name);
         }
       });

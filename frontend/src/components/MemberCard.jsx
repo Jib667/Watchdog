@@ -4,9 +4,6 @@ import { Card, Button, Badge, Row, Col } from 'react-bootstrap';
 // import { fetchMemberSponsored, fetchMemberCosponsored } from '../utils/api';
 import './MemberCard.css';
 
-// Simpler fallback image
-const FALLBACK_IMAGE = '/static/images/placeholder.jpg';
-
 // Updated MemberCard to display more data from the member prop
 const MemberCard = ({ member, onClose }) => {
 
@@ -19,7 +16,7 @@ const MemberCard = ({ member, onClose }) => {
   const district = member.district; // Null/undefined for senators
   const website = member.website;
   // Use the correct image_url field from core.py
-  const imageUrl = member.image_url || FALLBACK_IMAGE;
+  const imageUrl = member.image_url;
   const isRepresentative = !!district;
   const phone = member.phone;
   const officeAddress = member.office_address;
@@ -31,7 +28,7 @@ const MemberCard = ({ member, onClose }) => {
   const senateClass = member.senate_class; // For senators
 
   // Determine party class for styling
-  const partyLower = (party || '').toLowerCase(); // Handle potential null party
+  const partyLower = party ? party.toLowerCase() : '';
   let partyClass = 'unknown';
   if (partyLower === 'democrat' || partyLower === 'democratic') {
     partyClass = 'democrat';
@@ -42,13 +39,17 @@ const MemberCard = ({ member, onClose }) => {
   }
 
   return (
-    // Use a modal-like overlay structure
-    <div className="member-card-overlay" onClick={onClose}>
-      <Card className="member-card-modal" onClick={(e) => e.stopPropagation()}>
-        <Card.Header className="d-flex justify-content-between align-items-center">
-          {/* Header with Name and Title */}
-          <div>
-            <h3 className="member-card-name">{memberName}</h3>
+    // Modal Overlay (similar to Login/SignUp)
+    <div className="modal-overlay member-card-overlay" onClick={onClose}>
+      {/* Modal Content (similar structure) */}
+      <div className="modal-content member-card-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Modal Header */}
+        <div className="modal-header member-card-header">
+          <div className="member-card-title-section">
+            {/* REMOVE the dynamic party class from the name */}
+            <h2 className="member-card-name"> 
+              {memberName || 'Member Details'}
+            </h2>
             <div className="member-card-subtitle">
               {isRepresentative ? 'Representative' : 'Senator'}
               {state && ` - ${state}`}
@@ -56,81 +57,88 @@ const MemberCard = ({ member, onClose }) => {
               {!isRepresentative && stateRank && ` - ${stateRank.charAt(0).toUpperCase() + stateRank.slice(1)} Senator`}
             </div>
           </div>
-          {/* Use standard Bootstrap close button */}
-          <Button variant="close" onClick={onClose} aria-label="Close" />
-        </Card.Header>
+          <button className="close-button" onClick={onClose} aria-label="Close">×</button>
+        </div>
 
-        <Card.Body>
-          <Row className="mb-4">
-            {/* Image Column */}
-            <Col md={4} className="text-center mb-3 mb-md-0">
+        {/* Modal Body */}
+        <div className="modal-body member-card-body">
+          {/* Use flex layout classes defined in CSS */}
+          <div className="row"> 
+            {/* Image Column - Use specific class */}
+            <div className="col-image">
               <div className="member-card-image-container">
                 <img
-                  src={imageUrl}
+                  src={imageUrl} 
                   alt={`Portrait of ${memberName}`}
                   className="member-card-image"
                   onError={(e) => {
-                    e.target.onerror = null; // Prevent infinite loop
-                    e.target.src = FALLBACK_IMAGE;
+                    e.target.onerror = null;
+                    e.target.src = '/static/images/placeholder.jpg';
                   }}
                 />
               </div>
-            </Col>
+            </div>
 
-            {/* Info Column */}
-            <Col md={8}>
-               <div className="member-card-info">
-                 <h4>Details</h4>
-                 <p>
-                   <strong>Party: </strong>
-                   <Badge pill bg={partyClass === 'democrat' ? 'primary' : partyClass === 'republican' ? 'danger' : 'secondary'}>
+            {/* Info Column - Use specific class */}
+            <div className="col-info">
+              <div className="member-card-info">
+                {/* Keep details as paragraphs for now, can adjust styling in CSS */}
+                <p>
+                  <strong>Party: </strong>
+                  <Badge pill bg={partyClass === 'democrat' ? 'primary' : partyClass === 'republican' ? 'danger' : 'secondary'}>
                     {party || 'N/A'}
-                   </Badge>
-                 </p>
-                 <p><strong>State:</strong> {state}</p>
-                 {isRepresentative && district && (
-                    <p><strong>District:</strong> {district}</p>
-                 )}
-                 {!isRepresentative && senateClass && (
-                    <p><strong>Senate Class:</strong> {senateClass}</p>
-                 )}
-                 {termStart && termEnd && (
+                  </Badge>
+                </p>
+                <p><strong>State:</strong> {state}</p>
+                {isRepresentative && district && (
+                  <p><strong>District:</strong> {district}</p>
+                )}
+                {!isRepresentative && senateClass && (
+                  <p><strong>Senate Class:</strong> {senateClass}</p>
+                )}
+                {termStart && termEnd && (
                     <p><strong>Current Term:</strong> {termStart} to {termEnd}</p>
-                 )}
-                 {phone && (
-                    <p><strong>Phone:</strong> {phone}</p>
-                 )}
-                 {officeAddress && (
-                    <p><strong>Office:</strong> {officeAddress}</p>
-                 )}
-                 {website && (
-                    <p>
-                        <strong>Website: </strong>
-                        <a href={website} target="_blank" rel="noopener noreferrer">
-                            {website}
-                        </a>
-                    </p>
-                 )}
+                )}
+                {phone && (
+                  <p><strong>Phone:</strong> {phone}</p>
+                )}
+                {officeAddress && (
+                  <p><strong>Office:</strong> {officeAddress}</p>
+                )}
+                {website && (
+                  <p>
+                    <strong>Website: </strong>
+                    <a href={website} target="_blank" rel="noopener noreferrer">
+                      {website}
+                    </a>
+                  </p>
+                )}
                  {contactForm && (
-                    <p>
-                        <strong>Contact Form: </strong>
-                        <a href={contactForm} target="_blank" rel="noopener noreferrer">
-                            Official Contact Form
-                        </a>
-                    </p>
-                 )}
-                 {bioguideId && (
-                    <p><strong>BioGuide ID:</strong> {bioguideId}</p>
-                 )}
-               </div>
-            </Col>
-          </Row>
-        </Card.Body>
+                  <p>
+                    <strong>Contact Form: </strong>
+                    <a href={contactForm} target="_blank" rel="noopener noreferrer">
+                      Official Contact Form
+                    </a>
+                  </p>
+                )}
+                {bioguideId && (
+                  <p><strong>BioGuide ID:</strong> {bioguideId}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <Card.Footer className="text-center">
-          <Button variant="secondary" onClick={onClose}>Close</Button>
-        </Card.Footer>
-      </Card>
+        {/* Modal Footer */}
+        <div className="modal-footer member-card-footer">
+          {/* Center the button like login/signup modals */}
+          <div className="form-actions centered">
+              <button type="button" className="action-button cancel-button" onClick={onClose}>
+                Close
+              </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
