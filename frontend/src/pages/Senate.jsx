@@ -82,6 +82,7 @@ const Senate = () => {
   const handleMemberClick = (bioguideId) => {
     const member = allSenators.find(sen => sen.bioguide_id === bioguideId);
     if (member) {
+        console.log('Member data in handleMemberClick:', member);
         setSelectedMember(member);
         setIsModalOpen(true);
     } else {
@@ -130,7 +131,7 @@ const Senate = () => {
     // Assign the modified handleMemberClick to the window object
     window.handleSenClick = handleMemberClick;
 
-    let popupHtml = `<div class="popup-content"><h3>${stateName} Senators</h3>`;
+    let popupHtml = `<div class="popup-content"><h3 class="popup-state-title">${stateName} Senators</h3>`;
     stateMembers.forEach(sen => {
       const bioguideId = sen.bioguide_id || ''; 
       const partyLower = (sen.party || '').toLowerCase();

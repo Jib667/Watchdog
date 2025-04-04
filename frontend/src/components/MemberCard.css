@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap');
+
 .member-card {
   max-width: 900px;
   margin: 0 auto;
@@ -99,114 +101,245 @@
   }
 }
 
-/* Add overlay and modal card styles (adapted from WDOD_test) */
-.member-card-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6); /* Darker overlay */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1050; /* Ensure it's above other content, adjust if needed */
-    padding: 15px;
+/* --- Base Modal Overlay --- */
+.modal-overlay.member-card-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  overflow-y: auto;
+  padding-top: 5rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-bottom: 1rem;
 }
 
-.member-card-modal {
-    width: 90%;
-    max-width: 600px; /* Adjust max width as needed */
-    max-height: 90vh;
-    overflow-y: auto;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    animation: modalFadeIn 0.3s ease-out;
+/* --- Modal Content Box --- */
+.modal-content.member-card-modal {
+  background-color: #1e3a5f !important;
+  border-radius: 10px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 650px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  overflow: hidden;
+  border: 3px solid transparent;
+  transition: border-color 0.3s ease;
+  color: white;
 }
 
-.member-card-modal .card-header {
-    background-color: #f8f9fa; /* Lighter header */
-    border-bottom: 1px solid #dee2e6;
+/* --- Party Colored Borders --- */
+.modal-content.member-card-modal.party-democrat {
+  border-color: #007bff;
+}
+
+.modal-content.member-card-modal.party-republican {
+  border-color: #dc3545;
+}
+
+.modal-content.member-card-modal.party-independent {
+  border-color: #6f42c1;
+}
+
+/* --- Modal Header --- */
+.modal-header.member-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #2c4a70;
+  background-color: #1e3a5f;
+}
+
+.member-card-title-section {
+  flex-grow: 1;
+  margin-right: 1rem;
 }
 
 .member-card-name {
-    font-size: 1.5rem; /* Slightly larger name */
-    font-weight: 600;
-    color: #343a40;
-    margin-bottom: 0.25rem;
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: white;
+  line-height: 1.3;
+}
+
+.member-card-name.member-card-name-orbitron {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 600;
+  color: white;
 }
 
 .member-card-subtitle {
-    font-size: 0.9rem;
-    color: #6c757d;
+  font-size: 0.8rem;
+  color: #e0e0e0;
+  margin-top: 0.15rem;
 }
 
+.modal-header .close-button {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: white;
+  opacity: 0.7;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-header .close-button:hover {
+  opacity: 1;
+}
+
+/* --- Modal Body --- */
+.modal-body.member-card-body {
+  padding: 1.2rem;
+  overflow-y: auto;
+  flex-grow: 1;
+  background-color: #1e3a5f !important;
+}
+
+/* Use flexbox for layout */
+.member-card-body .row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -10px;
+  margin-right: -10px;
+}
+
+/* Column for image */
+.member-card-body .col-image {
+  flex: 0 0 140px;
+  max-width: 140px;
+  padding-left: 10px;
+  padding-right: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Column for info */
+.member-card-body .col-info {
+  flex: 1;
+  min-width: 0;
+  padding-left: 15px;
+  padding-right: 10px;
+  text-align: left;
+}
+
+/* Image Styling */
 .member-card-image-container {
-    padding: 1rem;
+  width: 120px;
+  height: 150px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border-radius: 5px;
+  border: 1px solid #2c4a70;
+  background-color: #1e3a5f;
+  flex-shrink: 0;
 }
 
 .member-card-image {
-    max-width: 100%;
-    height: auto;
-    max-height: 250px; /* Limit image height */
-    object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid #dee2e6;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
+/* Info Section Styling */
 .member-card-info {
-    padding: 1rem;
-    font-size: 0.95rem;
-}
-
-.member-card-info h4 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #e9ecef;
+  font-size: 0.85rem;
+  text-align: left;
+  color: white;
 }
 
 .member-card-info p {
-    margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+  color: white;
+  word-wrap: break-word;
+  text-align: left;
 }
 
 .member-card-info strong {
-    color: #495057;
+  color: #e0e0e0;
+  margin-right: 4px;
+  display: inline-block;
+  min-width: 80px;
+  font-weight: 500;
+}
+
+.member-card-info .badge {
+  font-size: 0.75rem;
+  vertical-align: middle;
+  padding: 0.2em 0.5em;
 }
 
 .member-card-info a {
-    color: #0d6efd;
-    text-decoration: none;
+  color: #8bb9ff;
+  text-decoration: none;
 }
 
 .member-card-info a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
+  color: #add6ff;
 }
 
-/* Keyframe animation for modal */
-@keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+/* --- Modal Footer --- */
+.modal-footer.member-card-footer {
+  padding: 0.75rem 1.2rem;
+  border-top: 1px solid #2c4a70;
+  background-color: #1e3a5f;
+  text-align: center;
 }
 
-/* --- Member Name Party Colors --- */
-.member-card-name.party-democrat {
-  color: #007bff; /* Blue */
+/* Centered Action Button Container */
+.form-actions.centered {
+  display: inline-block;
 }
 
-.member-card-name.party-republican {
-  color: #dc3545; /* Red */
+/* Action Button Styling */
+.action-button.cancel-button {
+  padding: 0.5rem 1.2rem;
+  font-size: 0.9rem;
+  background-color: #34557d;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
-.member-card-name.party-independent {
-  color: #6f42c1; /* Purple */
+.action-button.cancel-button:hover {
+  background-color: #466a94;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 576px) {
+  .member-card-body .col-image {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .member-card-body .col-info {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding-left: 10px;
+  }
+  
+  .member-card-image-container {
+    width: 100px;
+    height: 125px;
+    margin: 0 auto 1rem;
+  }
 } 

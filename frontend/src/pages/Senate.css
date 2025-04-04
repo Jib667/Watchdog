@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap');
+
 .senate-page {
   padding: 200px 20px 40px;
   max-width: 1400px;
@@ -394,70 +396,45 @@
   text-decoration: underline;
 }
 
-/* Leaflet popup customization */
-.leaflet-popup-content-wrapper {
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.leaflet-popup-content {
-  margin: 0;
-}
-
 /* Styles for popup content */
 .popup-content {
   font-family: 'Inter', sans-serif;
+  padding: 5px; /* Adjust overall padding */
 }
 
-.popup-content h3 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #343a40;
-  margin-bottom: 10px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid #e9ecef;
+/* Style the State Title */
+.leaflet-popup-content .popup-state-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem; /* Slightly larger */
+  font-weight: 700; /* Bolder Orbitron */
+  color: #343a40; /* Changed to standard dark gray */
+  margin: 0 0 12px 0; /* Adjust margins */
+  padding: 5px 8px 8px 8px; /* Add some padding */
+  border-bottom: 2px solid #e9ecef; /* Changed to subtle gray border */
+  text-align: center;
 }
 
-.popup-member-item {
-  display: flex;
+.leaflet-popup-content .popup-member-item {
+  display: flex; /* Use flex for better alignment */
   justify-content: space-between;
   align-items: center;
-  padding: 6px 8px;
-  margin-bottom: 4px;
-  border-radius: 4px;
+  padding: 8px 8px; /* Adjust padding */
+  margin-bottom: 0; /* Remove margin, rely on border */
   cursor: pointer;
+  border-bottom: 1px solid #e9ecef; /* Add subtle separator line */
   transition: background-color 0.2s ease;
   font-size: 0.85rem;
 }
 
-.popup-member-item:hover {
-  background-color: #e9ecef;
+.leaflet-popup-content .popup-member-item:last-child {
+  border-bottom: none; /* Remove border from last item */
 }
 
-.popup-member-name {
-  flex-grow: 1;
-  margin-right: 8px;
-  color: #212529;
+.leaflet-popup-content .popup-member-item:hover {
+  background-color: #f0f0f0;
 }
 
-.popup-member-party {
-  font-weight: 500;
-  color: #6c757d;
-}
-
-/* Add some padding for the leaflet popup */
-.leaflet-popup-content-wrapper {
-  border-radius: 6px;
-}
-
-.leaflet-popup-content {
-  margin: 10px 15px;
-  line-height: 1.4;
-  max-height: 250px; /* Limit popup height */
-  overflow-y: auto;
-}
-
-/* Styles for Leaflet popup member names */
+/* --- Popup Member Name Colors (Re-applied with !important) --- */
 .leaflet-popup-content .popup-member-name.party-democrat {
   color: #007bff !important; /* Blue */
   font-weight: bold;
@@ -471,22 +448,14 @@
   font-weight: bold;
 }
 
-/* Style for the popup member item itself */
-.leaflet-popup-content .popup-member-item {
-  display: block;
-  padding: 5px 8px;
-  margin-bottom: 3px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-.leaflet-popup-content .popup-member-item:hover {
-  background-color: #f0f0f0;
+/* Add some padding for the leaflet popup */
+.leaflet-popup-content-wrapper {
+  border-radius: 6px;
 }
 
-/* Keep party initial color */
-.leaflet-popup-content .popup-member-party {
-  color: #555;
-  margin-left: 5px;
-  font-size: 0.9em;
+.leaflet-popup-content {
+  margin: 10px 15px;
+  line-height: 1.4;
+  max-height: 250px; /* Limit popup height */
+  overflow-y: auto;
 } 

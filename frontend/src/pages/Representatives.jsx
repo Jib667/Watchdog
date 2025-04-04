@@ -82,8 +82,9 @@ const Representatives = () => {
   const handleMemberClick = (bioguideId) => {
     const member = allRepresentatives.find(rep => rep.bioguide_id === bioguideId);
     if (member) {
-        setSelectedMember(member);
-        setIsModalOpen(true);
+      console.log('Member data in handleMemberClick:', member);
+      setSelectedMember(member);
+      setIsModalOpen(true);
     } else {
         console.error(`Representative with BioGuide ID ${bioguideId} not found.`);
         // Optionally show an error to the user
@@ -138,7 +139,7 @@ const Representatives = () => {
     // Assign the modified handleMemberClick to the window object
     window.handleRepClick = handleMemberClick; 
 
-    let popupHtml = `<div class="popup-content"><h3>${stateName} Representatives</h3>`;
+    let popupHtml = `<div class="popup-content"><h3 class="popup-state-title">${stateName} Representatives</h3>`;
 
     Object.entries(representativesByDistrict).forEach(([district, reps]) => {
       popupHtml += `<div class="popup-district-group"><h4>District ${district}</h4>`;

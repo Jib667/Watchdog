@@ -6,8 +6,12 @@ import './MemberCard.css';
 
 // Updated MemberCard to display more data from the member prop
 const MemberCard = ({ member, onClose }) => {
+  console.log("MemberCard rendering with member:", member); // Log on render
 
-  if (!member) return null;
+  if (!member) {
+    console.log("MemberCard returning null because member is missing.");
+    return null;
+  }
 
   // Extract data from the member prop
   const memberName = member.name || 'Unknown Member';
@@ -27,27 +31,31 @@ const MemberCard = ({ member, onClose }) => {
   const stateRank = member.state_rank; // For senators
   const senateClass = member.senate_class; // For senators
 
-  // Determine party class for styling
+  // Determine party class for styling the MODAL BORDER
   const partyLower = party ? party.toLowerCase() : '';
-  let partyClass = 'unknown';
-  if (partyLower === 'democrat' || partyLower === 'democratic') {
-    partyClass = 'democrat';
+  let modalPartyClass = '';
+  if (partyLower === 'democrat') {
+    modalPartyClass = 'party-democrat';
   } else if (partyLower === 'republican') {
-    partyClass = 'republican';
-  } else if (partyLower === 'independent' || partyLower === 'independence') {
-    partyClass = 'independent';
+    modalPartyClass = 'party-republican';
+  } else if (partyLower === 'independent') {
+    modalPartyClass = 'party-independent';
   }
 
   return (
     // Modal Overlay (similar to Login/SignUp)
     <div className="modal-overlay member-card-overlay" onClick={onClose}>
-      {/* Modal Content (similar structure) */}
-      <div className="modal-content member-card-modal" onClick={(e) => e.stopPropagation()}>
+      {/* Apply the dynamic party class here for border styling */}
+      <div 
+        className={`modal-content member-card-modal ${modalPartyClass}`.trim()} 
+        onClick={(e) => e.stopPropagation()}
+        style={{ backgroundColor: '#1e3a5f', color: 'white' }}
+      >
         {/* Modal Header */}
         <div className="modal-header member-card-header">
           <div className="member-card-title-section">
-            {/* REMOVE the dynamic party class from the name */}
-            <h2 className="member-card-name"> 
+            {/* Add specific class for Orbitron font targeting */}
+            <h2 className="member-card-name member-card-name-orbitron"> 
               {memberName || 'Member Details'}
             </h2>
             <div className="member-card-subtitle">
@@ -57,15 +65,24 @@ const MemberCard = ({ member, onClose }) => {
               {!isRepresentative && stateRank && ` - ${stateRank.charAt(0).toUpperCase() + stateRank.slice(1)} Senator`}
             </div>
           </div>
-          <button className="close-button" onClick={onClose} aria-label="Close">×</button>
+          <button type="button" className="close-button" onClick={onClose} aria-label="Close">
+            &times; 
+          </button>
         </div>
 
         {/* Modal Body */}
-        <div className="modal-body member-card-body">
+        <div className="modal-body member-card-body" style={{ backgroundColor: '#1e3a5f', color: 'white' }}>
           {/* Use flex layout classes defined in CSS */}
-          <div className="row"> 
+          <div className="row" style={{ display: 'flex', flexWrap: 'nowrap' }}> 
             {/* Image Column - Use specific class */}
-            <div className="col-image">
+            <div className="col-image" style={{ 
+                flex: '0 0 140px', 
+                maxWidth: '140px', 
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                backgroundColor: '#1e3a5f'
+              }}>
               <div className="member-card-image-container">
                 <img
                   src={imageUrl} 
@@ -80,12 +97,19 @@ const MemberCard = ({ member, onClose }) => {
             </div>
 
             {/* Info Column - Use specific class */}
-            <div className="col-info">
-              <div className="member-card-info">
+            <div className="col-info" style={{ 
+                flex: '1', 
+                minWidth: '0', 
+                paddingLeft: '15px',
+                textAlign: 'left',
+                backgroundColor: '#1e3a5f',
+                color: 'white'
+              }}>
+              <div className="member-card-info" style={{ textAlign: 'left', color: 'white' }}>
                 {/* Keep details as paragraphs for now, can adjust styling in CSS */}
                 <p>
                   <strong>Party: </strong>
-                  <Badge pill bg={partyClass === 'democrat' ? 'primary' : partyClass === 'republican' ? 'danger' : 'secondary'}>
+                  <Badge pill bg={partyLower === 'democrat' ? 'primary' : partyLower === 'republican' ? 'danger' : 'secondary'}>
                     {party || 'N/A'}
                   </Badge>
                 </p>
