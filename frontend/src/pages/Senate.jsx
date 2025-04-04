@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container } from 'react-bootstrap';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
+import { useLocation } from 'react-router-dom'; // Import useLocation
 import MemberCard from '../components/MemberCard'; // Import the MemberCard component
 // Removed import for local data
 // import { getSenatorsByState } from '../data/senators';
@@ -18,6 +19,8 @@ const Senate = () => {
   // State for the modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+
+  const location = useLocation(); // Get location object
 
   // Fetch state GeoJSON data
   useEffect(() => {
@@ -37,27 +40,36 @@ const Senate = () => {
 
   // Fetch senators data from backend API
   useEffect(() => {
+    console.log(`Senate useEffect triggered for path: ${location.pathname}`); // Log effect trigger
+    
     const fetchSenatorsData = async () => {
+      console.log("fetchSenatorsData started..."); // Log function start
+      // Reset state on navigation
       setIsLoading(true);
       setError(null);
+      setAllSenators([]); 
+      setSelectedState(null); 
+      
       try {
         const response = await fetch('/api/congress/static/senators');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
+        console.log("Fetched senators data count:", data.length); // Log data success
         setAllSenators(data);
       } catch (err) {
         console.error('Error fetching senators data:', err);
         setError('Failed to load senators data. Please try again later.');
-        setAllSenators([]); // Ensure it's an array even on error
+        setAllSenators([]);
       } finally {
+        console.log("fetchSenatorsData finished, setting isLoading=false"); // Log finish
         setIsLoading(false);
       }
     };
 
     fetchSenatorsData();
-  }, []); // Runs once on component mount
+  }, [location]);
 
   // Function to get senators for a specific state from the fetched data
   const getSenatorsByState = (stateName) => {
@@ -165,6 +177,7 @@ const Senate = () => {
           />
           {stateData && (
             <GeoJSON
+              key={`sen-${allSenators.length}`}
               data={stateData}
               style={style}
               onEachFeature={(feature, layer) => {

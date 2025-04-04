@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container } from 'react-bootstrap';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
+import { useLocation } from 'react-router-dom'; // Import useLocation
 import MemberCard from '../components/MemberCard'; // Import the MemberCard component
 // Removed import for local data
 // import { getRepresentativesByState } from '../data/representatives';
@@ -18,6 +19,8 @@ const Representatives = () => {
   // State for the modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+
+  const location = useLocation(); // Get location object
 
   // Fetch state GeoJSON data
   useEffect(() => {
@@ -37,27 +40,36 @@ const Representatives = () => {
 
   // Fetch representatives data from backend API
   useEffect(() => {
+    console.log(`Representatives useEffect triggered for path: ${location.pathname}`); // Log effect trigger
+    
     const fetchRepsData = async () => {
+      console.log("fetchRepsData started..."); // Log function start
+      // Reset state on navigation
       setIsLoading(true);
       setError(null);
+      setAllRepresentatives([]); 
+      setSelectedState(null); 
+
       try {
         const response = await fetch('/api/congress/static/representatives');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
+        console.log("Fetched representatives data count:", data.length); // Log data success
         setAllRepresentatives(data);
       } catch (err) {
         console.error('Error fetching representatives data:', err);
         setError('Failed to load representatives data. Please try again later.');
-        setAllRepresentatives([]); // Ensure it's an array even on error
+        setAllRepresentatives([]);
       } finally {
+        console.log("fetchRepsData finished, setting isLoading=false"); // Log finish
         setIsLoading(false);
       }
     };
 
     fetchRepsData();
-  }, []); // Runs once on component mount
+  }, [location]);
 
   // Function to get representatives for a specific state from the fetched data
   const getRepresentativesByState = (stateName) => {
@@ -179,6 +191,7 @@ const Representatives = () => {
           />
           {stateData && (
             <GeoJSON
+              key={`reps-${allRepresentatives.length}`}
               data={stateData}
               style={style}
               onEachFeature={(feature, layer) => {
