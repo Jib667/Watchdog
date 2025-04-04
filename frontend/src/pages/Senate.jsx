@@ -66,29 +66,40 @@ const Senate = () => {
   };
 
   // Function to open the modal with selected member data
-  const handleMemberClick = (memberData) => {
-    setSelectedMember(memberData);
-    setIsModalOpen(true);
+  // Modified to accept bioguideId and find the member in the state list
+  const handleMemberClick = (bioguideId) => {
+    const member = allSenators.find(sen => sen.bioguide_id === bioguideId);
+    if (member) {
+        setSelectedMember(member);
+        setIsModalOpen(true);
+    } else {
+        console.error(`Senator with BioGuide ID ${bioguideId} not found.`);
+        // Optionally show an error to the user
+    }
   };
 
-  // Handle state selection (now just updates selected state for styling)
+  // Handle state selection
   const handleStateClick = (event) => {
-    const feature = event.layer.feature; // Access feature from layer
+    const feature = event.target.feature; 
     if (!feature || !feature.properties) return;
-    const stateName = feature.properties.NAME;
+    // Use the correct property 'name'
+    const stateName = feature.properties.name; 
     setSelectedState(stateName);
-    // No longer need to setMembers here
+
+    // Add console log here to only log the clicked state's properties
+    console.log('Clicked State Feature Properties:', feature.properties);
   };
 
   // Style function for the GeoJSON layer
   const style = (feature) => {
-    const state = feature.properties.postal;
-    const isSelected = state === selectedState;
+    // Compare selectedState against the 'name' property for consistency
+    const isSelected = feature?.properties?.name === selectedState;
+    // Use different colors for Senate page
     return {
-      fillColor: isSelected ? '#6B46C1' : '#9F7AEA',
+      fillColor: isSelected ? '#553C9A' : '#805AD5', // Darker purple when selected
       weight: isSelected ? 2 : 1,
       opacity: 1,
-      color: isSelected ? '#553C9A' : '#805AD5',
+      color: isSelected ? '#44337A' : '#6B46C1',
       dashArray: '3',
       fillOpacity: isSelected ? 0.4 : 0.1
     };
@@ -98,33 +109,33 @@ const Senate = () => {
   const createPopupContent = (stateName) => {
     const stateMembers = getSenatorsByState(stateName);
 
-    // Check for errors first
     if (error) return `Error: ${error}`;
-    
-    // If still loading, show loading message
     if (isLoading) return 'Loading senators...';
-    
-    // If loading is done and there are no members, show message
     if (stateMembers.length === 0) {
       return `<div class="popup-content">No senators found for ${stateName}.</div>`;
     }
 
-    // Make handleMemberClick globally accessible (or use event delegation)
-    // TEMPORARY HACK: Attach to window. This is not ideal for larger apps.
+    // Assign the modified handleMemberClick to the window object
     window.handleSenClick = handleMemberClick;
 
     let popupHtml = `<div class="popup-content"><h3>${stateName} Senators</h3>`;
     stateMembers.forEach(sen => {
-      const senJsonString = JSON.stringify(sen).replace(/'/g, "\\'").replace(/"/g, '\'');
-      popupHtml += `
-        <div 
-           class="popup-member-item"
-           onclick='window.handleSenClick(${senJsonString})'
-        >
-           <span class="popup-member-name">${sen.name}</span>
-           <span class="popup-member-party">(${sen.party ? sen.party.charAt(0) : 'U'})</span>
-        </div>
-      `;
+      // Pass only the bioguide_id (as a string) in the onclick handler
+      const bioguideId = sen.bioguide_id || ''; // Ensure we have an ID
+      if (bioguideId) { // Only add items with an ID
+           popupHtml += `
+             <div 
+                class="popup-member-item"
+                onclick='window.handleSenClick("${bioguideId}")'
+             >
+                <span class="popup-member-name">${sen.name}</span>
+                <span class="popup-member-party">(${sen.party ? sen.party.charAt(0) : 'U'})</span>
+             </div>
+           `;
+       } else {
+             // Optionally log or display senators without IDs differently
+             console.warn("Senator missing bioguide_id:", sen.name);
+       }
     });
     popupHtml += `</div>`;
     return popupHtml;
@@ -157,7 +168,9 @@ const Senate = () => {
               data={stateData}
               style={style}
               onEachFeature={(feature, layer) => {
-                const stateName = feature.properties.NAME;
+                // Use the correct property 'name'
+                const stateName = feature.properties.name;
+                
                 // Bind popup content dynamically
                 layer.bindPopup(() => createPopupContent(stateName), {
                     minWidth: 250,
@@ -165,17 +178,19 @@ const Senate = () => {
                 });
 
                 layer.on({
-                  click: handleStateClick,
+                  click: handleStateClick, // This now logs the properties too
                   mouseover: (e) => {
                     const layer = e.target;
-                    layer.setStyle({
+                    // Use the style function to ensure consistency on hover
+                     layer.setStyle({
                       fillOpacity: 0.6,
                       weight: 2
                     });
                   },
                   mouseout: (e) => {
                     const layer = e.target;
-                    layer.setStyle(style(feature));
+                    // Re-apply the dynamic style based on selection state
+                    layer.setStyle(style(feature)); 
                   }
                 });
               }}

@@ -66,26 +66,36 @@ const Representatives = () => {
   };
 
   // Function to open the modal with selected member data
-  const handleMemberClick = (memberData) => {
-    setSelectedMember(memberData);
-    setIsModalOpen(true);
+  // Modified to accept bioguideId and find the member in the state list
+  const handleMemberClick = (bioguideId) => {
+    const member = allRepresentatives.find(rep => rep.bioguide_id === bioguideId);
+    if (member) {
+        setSelectedMember(member);
+        setIsModalOpen(true);
+    } else {
+        console.error(`Representative with BioGuide ID ${bioguideId} not found.`);
+        // Optionally show an error to the user
+    }
   };
 
-  // Handle state selection (now just updates selected state for styling)
+  // Handle state selection
   const handleStateClick = (event) => {
-    const feature = event.layer.feature; // Access feature from layer
+    const feature = event.target.feature; 
     if (!feature || !feature.properties) return;
-    const stateName = feature.properties.NAME;
+    // Use the correct property 'name'
+    const stateName = feature.properties.name; 
     setSelectedState(stateName);
-    // No longer need to setMembers here as popup does filtering
+
+    // Move console log here to only log the clicked state's properties
+    console.log('Clicked State Feature Properties:', feature.properties);
   };
 
   // Style function for the GeoJSON layer
   const style = (feature) => {
-    const state = feature.properties.postal;
-    const isSelected = state === selectedState;
+    // Compare selectedState against the 'name' property for consistency
+    const isSelected = feature?.properties?.name === selectedState;
     return {
-      fillColor: isSelected ? '#D69E2E' : '#F6AD55',
+      fillColor: isSelected ? '#D69E2E' : '#F6AD55', // Darker orange when selected
       weight: isSelected ? 2 : 1,
       opacity: 1,
       color: isSelected ? '#B7791F' : '#DD6B20',
@@ -96,21 +106,14 @@ const Representatives = () => {
 
   // Create popup content
   const createPopupContent = (stateName) => {
-    // Filter representatives for the current state
     const stateMembers = getRepresentativesByState(stateName);
 
-    // Check for errors first
     if (error) return `Error: ${error}`;
-    
-    // If still loading, show loading message
     if (isLoading) return 'Loading representatives...'; 
-    
-    // If loading is done and there are no members, show message
     if (stateMembers.length === 0) {
       return `<div class="popup-content">No representatives found for ${stateName}.</div>`;
     }
 
-    // Group representatives by district
     const representativesByDistrict = stateMembers.reduce((acc, rep) => {
       const district = rep.district || 'Unknown District';
       if (!acc[district]) {
@@ -120,15 +123,7 @@ const Representatives = () => {
       return acc;
     }, {});
 
-    // Generate HTML string for the popup
-    // NOTE: Using dangerouslySetInnerHTML is generally discouraged in React,
-    // but for complex Leaflet popups generated dynamically, it's often the
-    // most straightforward way. Attaching React events inside this HTML is complex.
-    // We will attach simple onclick handlers that call a globally accessible function
-    // or manage clicks via event delegation if needed. For now, let's try simple onclick.
-
-    // Make handleMemberClick globally accessible (or use event delegation)
-    // TEMPORARY HACK: Attach to window. This is not ideal for larger apps.
+    // Assign the modified handleMemberClick to the window object
     window.handleRepClick = handleMemberClick; 
 
     let popupHtml = `<div class="popup-content"><h3>${stateName} Representatives</h3>`;
@@ -136,17 +131,22 @@ const Representatives = () => {
     Object.entries(representativesByDistrict).forEach(([district, reps]) => {
       popupHtml += `<div class="popup-district-group"><h4>District ${district}</h4>`;
       reps.forEach(rep => {
-        // Ensure rep data is properly stringified for the onclick attribute
-        const repJsonString = JSON.stringify(rep).replace(/'/g, "\\'").replace(/"/g, '\'');
-        popupHtml += `
-          <div 
-             class="popup-member-item"
-             onclick='window.handleRepClick(${repJsonString})'
-          >
-             <span class="popup-member-name">${rep.name}</span>
-             <span class="popup-member-party">(${rep.party ? rep.party.charAt(0) : 'U'})</span>
-          </div>
-        `;
+        // Pass only the bioguide_id (as a string) in the onclick handler
+        const bioguideId = rep.bioguide_id || ''; // Ensure we have an ID
+        if (bioguideId) { // Only add items with an ID
+             popupHtml += `
+               <div 
+                  class="popup-member-item"
+                  onclick='window.handleRepClick("${bioguideId}")' 
+               >
+                  <span class="popup-member-name">${rep.name}</span>
+                  <span class="popup-member-party">(${rep.party ? rep.party.charAt(0) : 'U'})</span>
+               </div>
+             `;
+        } else {
+             // Optionally log or display reps without IDs differently
+             console.warn("Representative missing bioguide_id:", rep.name);
+        }
       });
       popupHtml += `</div>`;
     });
@@ -182,25 +182,31 @@ const Representatives = () => {
               data={stateData}
               style={style}
               onEachFeature={(feature, layer) => {
-                const stateName = feature.properties.NAME;
+                // Use the correct property 'name'
+                const stateName = feature.properties.name;
+                // Remove console log from here
+                // console.log('Clicked State Feature Properties:', feature.properties);
+                
                 // Bind popup content dynamically
                 layer.bindPopup(() => createPopupContent(stateName), { 
-                    minWidth: 250, // Adjust popup size
+                    minWidth: 250, 
                     maxHeight: 300
                 });
 
                 layer.on({
-                  click: handleStateClick,
+                  click: handleStateClick, // This now logs the properties too
                   mouseover: (e) => {
                     const layer = e.target;
+                    // Use the style function to ensure consistency on hover
                     layer.setStyle({
-                      fillOpacity: 0.6,
+                      fillOpacity: 0.6, 
                       weight: 2
                     });
                   },
                   mouseout: (e) => {
                     const layer = e.target;
-                    layer.setStyle(style(feature));
+                    // Re-apply the dynamic style based on selection state
+                    layer.setStyle(style(feature)); 
                   }
                 });
               }}
