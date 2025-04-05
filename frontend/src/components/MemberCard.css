@@ -300,27 +300,41 @@
   border-top: 1px solid #2c4a70;
   background-color: #1e3a5f;
   text-align: center;
+  display: flex;
+  justify-content: center;
 }
 
 /* Centered Action Button Container */
 .form-actions.centered {
-  display: inline-block;
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  gap: 1rem;
+  margin: 0 auto;
 }
 
 /* Action Button Styling */
 .action-button.cancel-button {
-  padding: 0.5rem 1.2rem;
-  font-size: 0.9rem;
-  background-color: #34557d;
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background-color: rgba(255, 255, 255, 0.1);
   color: white;
-  border: none;
-  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 2rem;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+  box-shadow: none;
+  min-width: 120px;
 }
 
 .action-button.cancel-button:hover {
-  background-color: #466a94;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  transform: translateY(-2px);
 }
 
 /* Mobile responsiveness */

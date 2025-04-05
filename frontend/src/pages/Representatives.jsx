@@ -128,7 +128,14 @@ const Representatives = () => {
     }
 
     const representativesByDistrict = stateMembers.reduce((acc, rep) => {
-      const district = rep.district || 'Unknown District';
+      // Normalize district value - treat 0, "0", and "At-Large" all as "at-large"
+      let district = rep.district;
+      if (district === 0 || district === '0' || district === 'At-Large') {
+        district = 'at-large';
+      }
+      
+      console.log(`Rep ${rep.name}, district value: ${rep.district}, normalized to: ${district}`);
+      
       if (!acc[district]) {
         acc[district] = [];
       }
@@ -142,7 +149,10 @@ const Representatives = () => {
     let popupHtml = `<div class="popup-content"><h3 class="popup-state-title">${stateName} Representatives</h3>`;
 
     Object.entries(representativesByDistrict).forEach(([district, reps]) => {
-      popupHtml += `<div class="popup-district-group"><h4>District ${district}</h4>`;
+      // Display appropriate district header based on normalized values
+      let districtText = district === 'at-large' ? 'At-Large District' : `District ${district}`;
+      
+      popupHtml += `<div class="popup-district-group"><h4>${districtText}</h4>`;
       reps.forEach(rep => {
         const bioguideId = rep.bioguide_id || ''; 
         const partyLower = (rep.party || '').toLowerCase();

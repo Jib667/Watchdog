@@ -1,12 +1,71 @@
-import React from 'react';
-import { Card, Button, Badge, Row, Col } from 'react-bootstrap';
-// Removed import for utils/api.js as bill fetching is removed
-// import { fetchMemberSponsored, fetchMemberCosponsored } from '../utils/api';
+import React, { useEffect, useState } from 'react';
+import { Badge } from 'react-bootstrap';
 import './MemberCard.css';
+
+// Define API_BASE_URL - adjust this based on your actual API URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+// Function to generate different possible image filename variations
+const generateImageUrlVariations = (name, baseUrl) => {
+  if (!name) return [];
+  
+  const variations = [];
+  
+  // Clean the name by removing suffixes
+  let cleanedName = name.replace(/,?\s+(jr\.?|sr\.?|i{1,3}|iv|v)$/i, '').trim();
+  console.log("Name after removing suffixes:", cleanedName);
+  
+  // Handle nicknames in different quote formats: "Rick", 'Rick', "Rick", etc.
+  // \u201C and \u201D are unicode for curly quotes
+  cleanedName = cleanedName.replace(/\s+[\"\'\u201C\u201D]([^\"\']+)[\"\'\u201C\u201D]\s+/g, ' ');
+  console.log("Name after removing quoted nicknames:", cleanedName);
+  
+  // Remove middle names and initials - keep only first and last name
+  if (cleanedName.split(' ').length > 2) {
+    const parts = cleanedName.split(' ');
+    cleanedName = `${parts[0]} ${parts[parts.length - 1]}`;
+  }
+  console.log("Name simplified to first and last:", cleanedName);
+  
+  // Normalize accented characters (á, é, í, ó, ú, ñ, etc.)
+  const normalizedName = cleanedName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  console.log("Normalized name:", normalizedName);
+  
+  // First priority: firstname_lastname
+  const firstName = normalizedName.split(' ')[0];
+  const lastName = normalizedName.split(' ').pop();
+  
+  // Add variations
+  // 1. firstname_lastname (highest priority)
+  variations.push(`${baseUrl}/static/images/${firstName.toLowerCase()}_${lastName.toLowerCase()}.jpg`);
+  
+  // 2. lastname_firstname
+  variations.push(`${baseUrl}/static/images/${lastName.toLowerCase()}_${firstName.toLowerCase()}.jpg`);
+  
+  // 3. Full normalized name (all parts joined with underscores)
+  if (normalizedName.split(' ').length > 2) {
+    variations.push(`${baseUrl}/static/images/${normalizedName.toLowerCase().replace(/\s+/g, '_').replace(/\./g, '').replace(/'/g, '')}.jpg`);
+  }
+  
+  // Always try with just the first letter of first name + last name
+  variations.push(`${baseUrl}/static/images/${firstName.charAt(0).toLowerCase()}_${lastName.toLowerCase()}.jpg`);
+  
+  // Last resort: placeholder
+  variations.push(`${baseUrl}/static/images/placeholder.jpg`);
+  
+  // Log the variations for debugging
+  console.log("Image URL variations:", variations);
+  
+  return variations;
+};
 
 // Updated MemberCard to display more data from the member prop
 const MemberCard = ({ member, onClose }) => {
-  console.log("MemberCard rendering with member:", member); // Log on render
+  const [currentImageUrl, setCurrentImageUrl] = useState(null);
+  const [imageUrlIndex, setImageUrlIndex] = useState(0);
+  const [imageUrlVariations, setImageUrlVariations] = useState([]);
+  
+  console.log("MemberCard rendering with member:", member);
 
   if (!member) {
     console.log("MemberCard returning null because member is missing.");
@@ -19,8 +78,6 @@ const MemberCard = ({ member, onClose }) => {
   const state = member.state || '';
   const district = member.district; // Null/undefined for senators
   const website = member.website;
-  // Use the correct image_url field from core.py
-  const imageUrl = member.image_url;
   const isRepresentative = !!district;
   const phone = member.phone;
   const officeAddress = member.office_address;
@@ -30,7 +87,28 @@ const MemberCard = ({ member, onClose }) => {
   const termEnd = member.term_end;
   const stateRank = member.state_rank; // For senators
   const senateClass = member.senate_class; // For senators
-
+  
+  // Handle image URL to ensure it's properly formed
+  useEffect(() => {
+    const baseUrl = API_BASE_URL;
+    
+    // Generate all possible image URL variations
+    const variations = generateImageUrlVariations(memberName, baseUrl);
+    setImageUrlVariations(variations);
+    setImageUrlIndex(0); // Reset to first variation
+    setCurrentImageUrl(variations[0]); // Start with first variation
+  }, [member, memberName]);
+  
+  // Function to try the next image URL variation
+  const tryNextImageVariation = () => {
+    if (imageUrlIndex < imageUrlVariations.length - 1) {
+      const nextIndex = imageUrlIndex + 1;
+      setImageUrlIndex(nextIndex);
+      setCurrentImageUrl(imageUrlVariations[nextIndex]);
+      console.log(`Trying image variation ${nextIndex}:`, imageUrlVariations[nextIndex]);
+    }
+  };
+  
   // Determine party class for styling the MODAL BORDER
   const partyLower = party ? party.toLowerCase() : '';
   let modalPartyClass = '';
@@ -61,7 +139,9 @@ const MemberCard = ({ member, onClose }) => {
             <div className="member-card-subtitle">
               {isRepresentative ? 'Representative' : 'Senator'}
               {state && ` - ${state}`}
-              {isRepresentative && district && ` - District ${district}`}
+              {isRepresentative && district !== undefined && (
+                district === 0 || district === '0' || district === 'At-Large' ? ` - At-Large District` : ` - District ${district}`
+              )}
               {!isRepresentative && stateRank && ` - ${stateRank.charAt(0).toUpperCase() + stateRank.slice(1)} Senator`}
             </div>
           </div>
@@ -85,12 +165,13 @@ const MemberCard = ({ member, onClose }) => {
               }}>
               <div className="member-card-image-container">
                 <img
-                  src={imageUrl} 
+                  src={currentImageUrl} 
                   alt={`Portrait of ${memberName}`}
                   className="member-card-image"
                   onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = '/static/images/placeholder.jpg';
+                    console.log("Image failed to load:", currentImageUrl);
+                    e.target.onerror = null; // Prevent infinite loop if we reach the end
+                    tryNextImageVariation(); // Try next variation on error
                   }}
                 />
               </div>
@@ -155,11 +236,13 @@ const MemberCard = ({ member, onClose }) => {
 
         {/* Modal Footer */}
         <div className="modal-footer member-card-footer">
-          {/* Center the button like login/signup modals */}
           <div className="form-actions centered">
-              <button type="button" className="action-button cancel-button" onClick={onClose}>
-                Close
-              </button>
+            <button 
+              className="action-button cancel-button" 
+              onClick={onClose}
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>
