@@ -1,0 +1,517 @@
+/* Advanced Profile Page Styles */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap');
+
+.advanced-profile-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  background-color: transparent;
+  color: #333;
+  min-height: calc(100vh - 80px);
+}
+
+/* Loading state */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+}
+
+.loading-spinner {
+  color: white;
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Loading text */
+.text-center p {
+  color: white;
+}
+
+/* Back navigation */
+.back-navigation {
+  margin-bottom: 1.5rem;
+}
+
+/* Search Section */
+.search-section {
+  background-color: #1e3a5f; /* Navy blue background */
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+.search-section h2 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+}
+
+/* Form field styling */
+.search-section .form-control,
+.search-section .form-select {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.25rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.search-section .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.search-section .form-control:focus,
+.search-section .form-select:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* Search button styling */
+.search-section .btn-primary {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  font-weight: 500;
+}
+
+.search-section .btn-primary:hover,
+.search-section .btn-primary:focus {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.search-section .btn-secondary {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.search-section .btn-secondary:hover,
+.search-section .btn-secondary:focus {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: white;
+}
+
+/* Member Profile Styling */
+.member-profile-card {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  margin-bottom: 2rem;
+  border: 3px solid transparent; /* Party border styling */
+  background-color: #1e3a5f;
+  color: white;
+  transition: all 0.3s ease;
+  text-align: left;
+}
+
+/* Party-specific border colors - exactly like MemberCard */
+.democrat-border {
+  border-color: #007bff !important;
+}
+
+.republican-border {
+  border-color: #dc3545 !important;
+}
+
+.independent-border {
+  border-color: #6f42c1 !important;
+}
+
+.profile-header {
+  padding: 1.5rem;
+  color: white;
+  background-color: #1e3a5f;
+  border-bottom: 1px solid #2c4a70;
+}
+
+.profile-header .badge {
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+}
+
+.profile-header .d-flex {
+  display: inline-flex !important;
+}
+
+.member-name-orbitron {
+  font-family: 'Orbitron', sans-serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  margin-bottom: 0.5rem !important;
+  font-size: 1.75rem !important;
+}
+
+.profile-image-container {
+  margin-bottom: 1.5rem;
+  padding: 0.5rem;
+  position: relative;
+}
+
+.profile-image {
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.profile-image:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.member-profile-card .card-body {
+  padding: 1.5rem;
+  background-color: #1e3a5f;
+  color: white;
+}
+
+.member-profile-card .list-group-item {
+  color: white;
+  padding: 0.75rem 1rem;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.member-profile-card .list-group-item strong {
+  display: inline-block;
+  min-width: 120px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-right: 3px;
+}
+
+.member-profile-card .list-group-item a {
+  color: #add8e6; /* Light blue */
+  text-decoration: none;
+}
+
+.member-profile-card .list-group-item a:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+/* Results styling */
+.search-results h3 {
+  color: white;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  font-family: 'Orbitron', sans-serif;
+}
+
+/* Search result items */
+.search-results .list-group-item {
+  background-color: #1e3a5f;
+  color: white;
+  border: none;
+  margin-bottom: 0.75rem;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transition: transform 0.2s, box-shadow 0.2s;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid transparent;
+}
+
+.search-results .list-group-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+.search-results .list-group-item img {
+  border: 2px solid white;
+  width: 50px !important;
+  height: 50px !important; 
+  object-fit: cover;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}
+
+.search-results .list-group-item strong {
+  font-size: 1.1rem;
+  display: block;
+  margin-bottom: 0.25rem;
+  color: white;
+}
+
+.search-results .list-group-item span {
+  color: white;
+  opacity: 1;
+}
+
+/* Profile image optimization */
+img.rounded-circle {
+  background-color: #ddd;
+  transition: opacity 0.3s ease;
+}
+
+/* Member Profile Section */
+.member-profile-section {
+  margin-bottom: 2rem;
+}
+
+/* Keep for badges if needed */
+.bg-primary {
+  background-color: #0056b3 !important;
+}
+
+.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.bg-info {
+  background-color: #6f42c1 !important;
+}
+
+.member-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.member-name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.member-role {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.party-pill-badge {
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+}
+
+.profile-body {
+  padding: 1.5rem;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.member-profile-image {
+  width: 100%;
+  max-width: 220px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-links {
+  margin-top: 1rem;
+}
+
+.member-profile-details {
+  margin-bottom: 1.5rem;
+  color: white;
+}
+
+.detail-item {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detail-item:first-child {
+  padding-top: 0;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-item strong {
+  display: inline-block;
+  min-width: 120px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.info-box {
+  padding: 1.25rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 0.5rem;
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-box p:last-child {
+  margin-bottom: 0;
+}
+
+/* Button Styling */
+.action-button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  margin: 0;
+  min-width: 180px;
+  white-space: nowrap;
+}
+
+.action-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.search-button {
+  background-color: rgba(231, 76, 60, 0.8);
+  color: white;
+  border: 1px solid rgba(231, 76, 60, 0.9);
+}
+
+.search-button:hover {
+  background-color: rgba(231, 76, 60, 1);
+  color: white;
+}
+
+.clear-button {
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.clear-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.back-button {
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.back-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.website-button, .contact-button {
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.website-button:hover, .contact-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .member-profile-card {
+    border-width: 2px;
+  }
+  
+  .profile-header {
+    padding: 1rem;
+  }
+  
+  .profile-header .badge {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .member-profile-card .card-body {
+    padding: 1rem;
+  }
+  
+  .search-section {
+    padding: 1rem;
+  }
+  
+  .member-profile-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .member-profile-header .party-pill-badge {
+    margin-top: 0.75rem;
+  }
+  
+  .member-profile-image {
+    max-width: 180px;
+    margin-bottom: 1rem;
+  }
+  
+  .detail-item strong {
+    min-width: 100px;
+  }
+  
+  .action-button {
+    padding: 0.6rem 1.25rem;
+    font-size: 0.95rem;
+    min-width: 160px;
+  }
+  
+  .member-name-orbitron {
+    font-size: 1.4rem !important;
+  }
+  
+  .profile-image {
+    width: 200px !important;
+    height: 240px !important;
+  }
+}
+
+/* Fix for label and value formatting */
+.info-item {
+  display: flex;
+  align-items: flex-start;
+}
+
+.info-label {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  min-width: 120px;
+  position: relative;
+}
+
+.info-label::after {
+  content: ':';
+  margin-right: 0.5rem;
+}
+
+.info-value {
+  flex: 1;
+  word-break: break-word;
+}
+
+/* Additional media query for mobile */
+@media (max-width: 576px) {
+  .info-item {
+    flex-direction: column;
+  }
+  
+  .info-label {
+    margin-bottom: 0.25rem;
+  }
+} 

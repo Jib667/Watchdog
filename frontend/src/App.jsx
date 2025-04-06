@@ -16,19 +16,7 @@ import Representatives from './pages/Representatives'
 import Senate from './pages/Senate'
 import Contact from './pages/Contact'
 import AdminPage from './pages/AdminPage'
-
-// Location tracker component is no longer needed
-/*
-function LocationTracker({ setCurrentPath }) {
-  const location = useLocation();
-  
-  useEffect(() => {
-    setCurrentPath(location.pathname);
-  }, [location, setCurrentPath]);
-  
-  return null;
-}
-*/
+import AdvancedProfile from './pages/AdvancedProfile'
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -37,12 +25,10 @@ function App() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  // const [currentPath, setCurrentPath] = useState('/'); // Removed
-  
-  // Use location directly within App for reactivity and keys
+
   const location = useLocation();
   
-  // Add debugging for sidebar state
+ 
   useEffect(() => {
     console.log("Sidebar state changed:", sidebarOpen);
   }, [sidebarOpen]);
@@ -233,7 +219,9 @@ function App() {
           <Route path="/representatives" element={<Representatives />} />
           <Route path="/senate" element={<Senate />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/admin" element={<AdminPage />} /> 
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/advanced-profile" element={<AdvancedProfile />} />
+          <Route path="/advanced-profile/:memberId" element={<AdvancedProfile />} />
         </Routes>
       </main>
 

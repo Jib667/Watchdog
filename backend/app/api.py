@@ -21,7 +21,8 @@ from .core import (
     ALL_SENATORS as static_sens,
     find_representative,
     find_senators,
-    find_member_by_id
+    find_member_by_id,
+    STATE_CODE_TO_NAME
 )
 from .db import get_db_connection, Token, TokenData, User, UserCreate, UserInDB
 
@@ -204,3 +205,89 @@ async def get_static_senators():
     return static_sens
 
 # Removed old DB-querying congress endpoints 
+
+# --- Congress Search/Member API --- #
+
+@router.get("/congress/search", response_model=List[Dict[str, Any]], tags=["congress"])
+async def search_members(
+    name: Optional[str] = None,
+    state: Optional[str] = None,
+    party: Optional[str] = None,
+    type: Optional[str] = None,
+    district: Optional[str] = None
+):
+    """
+    Search for congress members based on various criteria.
+    
+    Parameters:
+    - name: Filter by name (partial match)
+    - state: Filter by state (exact match)
+    - party: Filter by party (exact match)
+    - type: Filter by type (rep/sen)
+    - district: Filter by district (for representatives only)
+    """
+    # Collect all members first based on type
+    if type == "rep":
+        results = static_reps.copy()
+    elif type == "sen":
+        results = static_sens.copy()
+    else:
+        # If no specific type, include both
+        results = static_reps.copy() + static_sens.copy()
+    
+    # Normalize state if provided - handle both state codes and names
+    normalized_state = None
+    if state:
+        # Check if it's a state code first
+        normalized_state = STATE_CODE_TO_NAME.get(state.upper())
+        # If not a code, use as is (it's a state name)
+        if not normalized_state:
+            normalized_state = state
+    
+    # Apply filters
+    filtered_results = []
+    for member in results:
+        # Name filter (case-insensitive partial match)
+        if name and name.lower() not in member["name"].lower():
+            continue
+            
+        # State filter (case-insensitive match)
+        if normalized_state and normalized_state.lower() != member["state"].lower():
+            continue
+            
+        # Party filter (case-insensitive match)
+        if party and party.lower() != member["party"].lower():
+            continue
+            
+        # District filter (for representatives only)
+        if district:
+            # Only apply to representatives who have district field
+            if "district" not in member:
+                continue
+            
+            member_district = str(member["district"]).lower()
+            search_district = str(district).lower()
+            
+            # Handle "At-Large" case - various forms
+            if search_district in ["0", "at-large", "at large", "atl", "at-l"]:
+                if member_district not in ["0", "at-large", "at large"]:
+                    continue
+            # Normal district number comparison
+            elif member_district != search_district:
+                continue
+        
+        filtered_results.append(member)
+    
+    return filtered_results
+
+
+@router.get("/congress/member/{member_id}", response_model=Dict[str, Any], tags=["congress"])
+async def get_member_by_id(member_id: str):
+    """Get specific congress member by ID."""
+    member = find_member_by_id(member_id)
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Member with id {member_id} not found"
+        )
+    return member 

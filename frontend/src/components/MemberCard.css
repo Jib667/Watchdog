@@ -122,11 +122,11 @@
 
 /* --- Modal Content Box --- */
 .modal-content.member-card-modal {
-  background-color: #1e3a5f !important;
+  background-color: #1e3a5f;
   border-radius: 10px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   width: 100%;
-  max-width: 650px;
+  max-width: 700px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -205,21 +205,22 @@
   padding: 1.2rem;
   overflow-y: auto;
   flex-grow: 1;
-  background-color: #1e3a5f !important;
+  background-color: #1e3a5f;
+  color: white;
 }
 
 /* Use flexbox for layout */
 .member-card-body .row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin-left: -10px;
   margin-right: -10px;
 }
 
 /* Column for image */
 .member-card-body .col-image {
-  flex: 0 0 140px;
-  max-width: 140px;
+  flex: 0 0 200px;
+  max-width: 200px;
   padding-left: 10px;
   padding-right: 10px;
   display: flex;
@@ -231,15 +232,15 @@
 .member-card-body .col-info {
   flex: 1;
   min-width: 0;
-  padding-left: 15px;
+  padding-left: 35px;
   padding-right: 10px;
   text-align: left;
 }
 
 /* Image Styling */
 .member-card-image-container {
-  width: 120px;
-  height: 150px;
+  width: 180px;
+  height: 225px;
   margin-bottom: 1rem;
   overflow: hidden;
   border-radius: 5px;
@@ -304,17 +305,18 @@
   justify-content: center;
 }
 
-/* Centered Action Button Container */
-.form-actions.centered {
+/* Form actions container spacing */
+.form-actions {
   display: flex;
   justify-content: center;
-  flex-direction: row;
-  gap: 1rem;
-  margin: 0 auto;
+  align-items: center;
+  width: 100%;
+  gap: 20px;
+  padding: 0.5rem 0;
 }
 
-/* Action Button Styling */
-.action-button.cancel-button {
+/* Action Button Styling - unified styles for both buttons */
+.action-button {
   display: inline-block;
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
@@ -328,10 +330,11 @@
   text-align: center;
   margin: 0;
   box-shadow: none;
-  min-width: 120px;
+  min-width: 220px;
+  white-space: nowrap;
 }
 
-.action-button.cancel-button:hover {
+.action-button:hover {
   background-color: rgba(255, 255, 255, 0.2);
   color: white;
   transform: translateY(-2px);
@@ -352,8 +355,14 @@
   }
   
   .member-card-image-container {
-    width: 100px;
-    height: 125px;
+    width: 160px;
+    height: 200px;
     margin: 0 auto 1rem;
+  }
+  
+  .action-button {
+    min-width: 175px;
+    font-size: 0.9rem;
+    padding: 0.7rem 1.3rem;
   }
 } 

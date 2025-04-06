@@ -28,6 +28,11 @@ STATE_CODE_TO_NAME = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 }
 
+# Function to get the list of state names
+def get_list_of_states() -> List[str]:
+    """Returns a list of US state names."""
+    return list(STATE_CODE_TO_NAME.values())
+
 # --- Configuration Settings --- #
 
 # Base directory determined relative to this file

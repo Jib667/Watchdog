@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Badge } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import './MemberCard.css';
 
 // Define API_BASE_URL - adjust this based on your actual API URL
@@ -61,6 +62,7 @@ const generateImageUrlVariations = (name, baseUrl) => {
 
 // Updated MemberCard to display more data from the member prop
 const MemberCard = ({ member, onClose }) => {
+  const navigate = useNavigate();
   const [currentImageUrl, setCurrentImageUrl] = useState(null);
   const [imageUrlIndex, setImageUrlIndex] = useState(0);
   const [imageUrlVariations, setImageUrlVariations] = useState([]);
@@ -120,6 +122,12 @@ const MemberCard = ({ member, onClose }) => {
     modalPartyClass = 'party-independent';
   }
 
+  // Navigate to advanced profile
+  const handleViewAdvancedProfile = () => {
+    navigate(`/advanced-profile/${bioguideId}`, { state: { member } });
+    onClose(); // Close the modal
+  };
+
   return (
     // Modal Overlay (similar to Login/SignUp)
     <div className="modal-overlay member-card-overlay" onClick={onClose}>
@@ -127,7 +135,6 @@ const MemberCard = ({ member, onClose }) => {
       <div 
         className={`modal-content member-card-modal ${modalPartyClass}`.trim()} 
         onClick={(e) => e.stopPropagation()}
-        style={{ backgroundColor: '#1e3a5f', color: 'white' }}
       >
         {/* Modal Header */}
         <div className="modal-header member-card-header">
@@ -151,18 +158,11 @@ const MemberCard = ({ member, onClose }) => {
         </div>
 
         {/* Modal Body */}
-        <div className="modal-body member-card-body" style={{ backgroundColor: '#1e3a5f', color: 'white' }}>
+        <div className="modal-body member-card-body">
           {/* Use flex layout classes defined in CSS */}
-          <div className="row" style={{ display: 'flex', flexWrap: 'nowrap' }}> 
+          <div className="row"> 
             {/* Image Column - Use specific class */}
-            <div className="col-image" style={{ 
-                flex: '0 0 140px', 
-                maxWidth: '140px', 
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                backgroundColor: '#1e3a5f'
-              }}>
+            <div className="col-image">
               <div className="member-card-image-container">
                 <img
                   src={currentImageUrl} 
@@ -178,15 +178,8 @@ const MemberCard = ({ member, onClose }) => {
             </div>
 
             {/* Info Column - Use specific class */}
-            <div className="col-info" style={{ 
-                flex: '1', 
-                minWidth: '0', 
-                paddingLeft: '15px',
-                textAlign: 'left',
-                backgroundColor: '#1e3a5f',
-                color: 'white'
-              }}>
-              <div className="member-card-info" style={{ textAlign: 'left', color: 'white' }}>
+            <div className="col-info">
+              <div className="member-card-info">
                 {/* Keep details as paragraphs for now, can adjust styling in CSS */}
                 <p>
                   <strong>Party: </strong>
@@ -236,7 +229,13 @@ const MemberCard = ({ member, onClose }) => {
 
         {/* Modal Footer */}
         <div className="modal-footer member-card-footer">
-          <div className="form-actions centered">
+          <div className="form-actions">
+            <button 
+              className="action-button view-profile-button" 
+              onClick={handleViewAdvancedProfile}
+            >
+              Advanced Profile
+            </button>
             <button 
               className="action-button cancel-button" 
               onClick={onClose}

@@ -60,16 +60,21 @@ const Sidebar = ({ isOpen, onClose, user }) => {
             </li>
             <li>
               <NavLink to="/representatives" className={({ isActive }) => isActive ? 'active' : ''} onClick={onClose}>
-                House of Representatives
+                House
               </NavLink>
             </li>
             <li>
-              <NavLink to="/senate" className={({ isActive }) => isActive ? 'active' : ''} onClick={onClose}>
+              <NavLink to="/senate" className={({ isActive }) => `sidebar-link ${isActive ? "active-link" : ""}`} onClick={onClose}>
                 Senate
               </NavLink>
             </li>
             <li>
-              <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''} onClick={onClose}>
+              <NavLink to="/advanced-profile" className={({ isActive }) => `sidebar-link ${isActive ? "active-link" : ""}`} onClick={onClose}>
+                Advanced Profile
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/contact" className={({ isActive }) => `sidebar-link ${isActive ? "active-link" : ""}`} onClick={onClose}>
                 Contact
               </NavLink>
             </li>
