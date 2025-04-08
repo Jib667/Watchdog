@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
 import './App.css'
-import capitolImage from './assets/capitol.png' // Import the capitol image
-import donkeyGif from './assets/donkey.gif' // Import donkey mascot
-import elephantGif from './assets/elephant.gif' // Import elephant mascot
+import capitolImage from './assets/capitol.png' 
+import donkeyGif from './assets/donkey.gif' 
+import elephantGif from './assets/elephant.gif' 
 
-// Components
 import Sidebar from './components/Sidebar'
 import SignUp from './components/SignUp'
 import Login from './components/Login'
 
-// Pages
 import Home from './pages/Home'
 import Representatives from './pages/Representatives'
 import Senate from './pages/Senate'
@@ -33,7 +31,6 @@ function App() {
     console.log("Sidebar state changed:", sidebarOpen);
   }, [sidebarOpen]);
   
-  // Check for user authentication on load
   useEffect(() => {
     const checkUserAuth = async () => {
       setIsLoading(true);
@@ -52,7 +49,7 @@ function App() {
             console.log('User data fetched:', userData);
             setUser(userData);
           } else {
-            // If the token is invalid, clear it
+          
             console.log('Invalid token, clearing authentication');
             localStorage.removeItem('accessToken');
             localStorage.removeItem('tokenType');
@@ -70,14 +67,12 @@ function App() {
     checkUserAuth();
   }, []);
   
-  // Handle user logout
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('tokenType');
     setUser(null);
   };
   
-  // Handle scroll events to update header appearance
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 50) {
@@ -89,7 +84,6 @@ function App() {
     
     window.addEventListener('scroll', handleScroll);
     
-    // Clean up the event listener on component unmount
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
@@ -105,7 +99,6 @@ function App() {
   
   const closeLogin = () => {
     setShowLogin(false);
-    // After successful login, we should refresh user data
     const token = localStorage.getItem('accessToken');
     if (token) {
       fetch('/api/users/me', {
