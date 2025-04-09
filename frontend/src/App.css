@@ -298,14 +298,16 @@ h1, h2, h3, h4 {
   font-family: 'Orbitron', sans-serif;
   letter-spacing: 0.5px;
   line-height: 1.1;
+  text-transform: uppercase;
 }
 
 .app-subtitle {
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: #E9D8FD;
   margin: 0;
   font-style: italic;
   margin-top: 2px;
+  margin-left: -5px;
 }
 
 .menu-button {
@@ -430,7 +432,7 @@ h1, h2, h3, h4 {
 .logo-text {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   text-align: left;
 }
 

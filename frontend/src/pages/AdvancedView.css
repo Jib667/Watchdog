@@ -269,10 +269,11 @@
 
 /* Results styling */
 .search-results h3 {
+  margin-top: 1.5rem; /* Adjust spacing if needed */
+  margin-bottom: 1rem;
+  font-size: 1.5rem; /* Reduced font size */
   color: white;
-  margin-bottom: 1.5rem;
-  font-weight: 600;
-  font-family: 'Orbitron', sans-serif;
+  text-align: left; /* Align to the left */
 }
 
 /* Search result items */

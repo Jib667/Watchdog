@@ -650,7 +650,7 @@ function AdvancedView() {
     // Render search results with improved styling
     const renderSearchResults = () => (
         <div className="search-results">
-            <h3 className="mt-4 mb-3">Search Results</h3>
+            <h3 className="mt-4 mb-3">Search Results...</h3>
             <ListGroup>
                 {searchResults.map(res => {
                     // Determine party class for styling
