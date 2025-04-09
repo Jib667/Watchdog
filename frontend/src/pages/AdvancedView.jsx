@@ -1,21 +1,24 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation, useParams, Link } from 'react-router-dom';
+import { useLocation, useParams, Link, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Spinner, Alert, Badge, ListGroup, Image } from 'react-bootstrap';
-import './AdvancedProfile.css'; // Ensure CSS is imported
+import './AdvancedView.css'; // Updated CSS import
+import { useSelector } from 'react-redux';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-function AdvancedProfile() {
+function AdvancedView() {
     const [member, setMember] = useState(null);
     const [loading, setLoading] = useState(false); // Start false, set true during fetch
     const [error, setError] = useState('');
     const [states, setStates] = useState([]);
+    const [committees, setCommittees] = useState([]); // Add committees state
     const [searchTerm, setSearchTerm] = useState({
         name: '',
         state: '',
         party: '',
         memberType: '', // Added memberType
-        district: '' // Added district
+        district: '',
+        committee: '' // Add committee search term
     });
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -24,6 +27,7 @@ function AdvancedProfile() {
     const preloadedImages = useRef(new Map());
     const location = useLocation();
     const { memberId } = useParams(); // Get memberId from URL if present
+    const navigate = useNavigate();
 
     // ----- Image Handling With Pre-Caching -----
     const [currentImageUrl, setCurrentImageUrl] = useState('');
@@ -228,6 +232,33 @@ function AdvancedProfile() {
         }
     }, []);
 
+    // Load committees for dropdown
+    const loadCommittees = useCallback(async () => {
+        try {
+            const response = await fetch(`${API_URL}/api/congress/committees`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                setCommittees(data);
+            } else {
+                console.error("Fetched committees data is not an array:", data);
+                throw new Error("Invalid data format for committees");
+            }
+        } catch (err) {
+            console.error("Failed to fetch committees:", err);
+            setError("Failed to load committee list.");
+            setCommittees([]);
+        }
+    }, []);
+
+    // Load data when component mounts
+    useEffect(() => {
+        loadStates();
+        loadCommittees(); // Load committees on mount
+    }, [loadStates, loadCommittees]);
+
     // Fetch member data by ID
     const loadMemberById = useCallback(async (id) => {
         setLoading(true);
@@ -318,7 +349,7 @@ function AdvancedProfile() {
 
     // Load member data when memberId changes
     useEffect(() => {
-        console.log("AdvancedProfile mounting or dependencies changed.");
+        console.log("AdvancedView mounting or dependencies changed.");
         loadStates(); // Load states on component mount
 
         // Prioritize member data passed via location state
@@ -368,12 +399,15 @@ function AdvancedProfile() {
         if (searchTerm.name) queryParams.append('name', searchTerm.name);
         if (searchTerm.state) queryParams.append('state', searchTerm.state);
         if (searchTerm.party) queryParams.append('party', searchTerm.party);
-        if (searchTerm.memberType) queryParams.append('type', searchTerm.memberType); // Add type
-        if (searchTerm.district && searchTerm.memberType === 'rep') queryParams.append('district', searchTerm.district); // Add district only for reps
+        if (searchTerm.memberType) queryParams.append('type', searchTerm.memberType);
+        if (searchTerm.district && searchTerm.memberType === 'rep') queryParams.append('district', searchTerm.district);
+        if (searchTerm.committee) queryParams.append('committee', searchTerm.committee); 
+
+        const searchUrl = `${API_URL}/api/congress/search?${queryParams.toString()}`;
+        console.log("Search URL:", searchUrl);
 
         try {
-            // console.log(`Fetching: ${API_URL}/api/congress/search?${queryParams.toString()}`);
-            const response = await fetch(`${API_URL}/api/congress/search?${queryParams.toString()}`);
+            const response = await fetch(searchUrl);
             if (!response.ok) {
                  if (response.status === 404) {
                     throw new Error("No members found matching your criteria.");
@@ -387,6 +421,58 @@ function AdvancedProfile() {
                  console.error("Search response is not an array:", data);
                 throw new Error("Received invalid search results format.");
             }
+            
+            // Debug committee filtering
+            if (searchTerm.committee) {
+                console.log("Committee filtering debug:");
+                console.log(`- Looking for committee ID: ${searchTerm.committee}`);
+                console.log(`- Found ${data.length} members after filtering`);
+                
+                if (data.length === 0) {
+                    // Check if any member has committee data at all
+                    try {
+                        const testResponse = await fetch(`${API_URL}/api/congress/search`);
+                        if (testResponse.ok) {
+                            const allMembers = await testResponse.json();
+                            const membersWithCommittees = allMembers.filter(m => 
+                                m.committees && m.committees.length > 0);
+                            
+                            console.log(`- Total members with committee data: ${membersWithCommittees.length} out of ${allMembers.length}`);
+                            
+                            if (membersWithCommittees.length > 0) {
+                                console.log("- Sample of committee data:");
+                                const sampleMember = membersWithCommittees[0];
+                                console.log(`  Member: ${sampleMember.name}`);
+                                console.log(`  Committees: ${JSON.stringify(sampleMember.committees.slice(0, 3))}`);
+                            }
+                            
+                            // Check if any member has this specific committee
+                            const membersWithThisCommittee = allMembers.filter(m => 
+                                m.committees && m.committees.some(c => c.committee_id === searchTerm.committee));
+                            
+                            console.log(`- Members with selected committee: ${membersWithThisCommittee.length}`);
+                            
+                            if (membersWithThisCommittee.length > 0) {
+                                console.log('- Committee exists but API filtering failed, showing manually filtered results instead');
+                                setSearchResults(membersWithThisCommittee);
+                                setIsSearching(false);
+                                return;
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Fallback committee search failed:", err);
+                    }
+                } else {
+                    // If we found results, show the first few
+                    console.log(`- First ${Math.min(3, data.length)} members in committee:`)
+                    for (let i = 0; i < Math.min(3, data.length); i++) {
+                        const member = data[i];
+                        const committeeMatch = member.committees?.find(c => c.committee_id === searchTerm.committee);
+                        console.log(`  ${member.name} - ${committeeMatch ? committeeMatch.name : 'Unknown role'}`);
+                    }
+                }
+            }
+            
             setSearchResults(data);
              if (data.length === 0) {
                 setError("No members found matching your criteria.");
@@ -402,7 +488,14 @@ function AdvancedProfile() {
     };
 
      const handleClearSearch = () => {
-        setSearchTerm({ name: '', state: '', party: '', memberType: '', district: '' });
+        setSearchTerm({ 
+            name: '', 
+            state: '', 
+            party: '', 
+            memberType: '', 
+            district: '',
+            committee: '' // Clear committee too
+        });
         setError('');
         setMember(null); // Clear member view if resetting search
         
@@ -436,7 +529,7 @@ function AdvancedProfile() {
             });
     };
 
-    // Render the search form
+    // Render the search form with committee dropdown
     const renderSearchForm = () => (
         <Form onSubmit={handleSearchSubmit} className="mb-4">
             <div className="search-container">
@@ -487,6 +580,40 @@ function AdvancedProfile() {
                             <option value="Democrat">Democrat</option>
                             <option value="Republican">Republican</option>
                             <option value="Independent">Independent</option>
+                        </Form.Select>
+                    </Form.Group>
+                </div>
+                
+                {/* Committee Select - New dropdown */}
+                <div>
+                    <Form.Group controlId="formCommittee">
+                        <Form.Label visuallyHidden>Committee</Form.Label>
+                        <Form.Select 
+                            name="committee" 
+                            value={searchTerm.committee} 
+                            onChange={(e) => {
+                                const committeeId = e.target.value;
+                                console.log(`Selected committee ID: ${committeeId}`);
+                                
+                                // Also log the matching committee name for reference
+                                if (committeeId) {
+                                    const selectedCommittee = committees.find(c => c.committee_id === committeeId);
+                                    if (selectedCommittee) {
+                                        console.log(`Selected committee name: ${selectedCommittee.name}`);
+                                        console.log(`Committee details: ${JSON.stringify(selectedCommittee)}`);
+                                    }
+                                }
+                                handleSearchChange(e);
+                            }}
+                            disabled={!committees.length}
+                        >
+                            <option value="">Any Committee</option>
+                            {Array.isArray(committees) && committees.map(committee => (
+                                <option key={committee.committee_id} value={committee.committee_id}>
+                                    {committee.name} ({committee.committee_id})
+                                </option>
+                            ))}
+                            {!committees.length && <option>Loading Committees...</option>}
                         </Form.Select>
                     </Form.Group>
                 </div>
@@ -597,7 +724,7 @@ function AdvancedProfile() {
         </div>
     );
 
-     // Render member profile details
+     // Render member profile details with committee information
     const renderMemberProfile = () => {
         if (!member) return null;
 
@@ -609,119 +736,176 @@ function AdvancedProfile() {
         const badgeVariant = member.party === 'Democrat' ? 'primary' : 
                             member.party === 'Republican' ? 'danger' : 'info';
 
-        // Basic details
-        let details = `${member.state}`;
-        if (member.member_type === 'representative' && member.district) {
-            details += ` - District ${member.district}`;
-        } else if (member.member_type === 'senator') {
-            details += ` - Senator${member.state_rank ? ` (${member.state_rank})` : ''}`;
-        }
+        // Filter for subcommittees only and then deduplicate
+        const subcommitteesOnly = member.committees?.filter(c => c.is_subcommittee) || [];
+        const seenSubcommitteeIds = new Set();
+        const uniqueSubcommittees = subcommitteesOnly.filter(committee => {
+            if (!committee.committee_id) return false; // Skip if no ID
+            if (!seenSubcommitteeIds.has(committee.committee_id)) {
+                seenSubcommitteeIds.add(committee.committee_id);
+                return true;
+            }
+            return false;
+        });
+
+        // Helper function to prioritize leadership roles for sorting
+        const getRolePriority = (role) => {
+            const roleLower = role?.toLowerCase();
+            if (roleLower === 'chairman' || roleLower === 'chair') return 0;
+            if (roleLower === 'vice chairman' || roleLower === 'vice chair') return 1;
+            if (roleLower === 'ranking member') return 2;
+            if (roleLower === 'ex officio') return 3;
+            // Add other specific leadership roles here if needed, adjusting numbers
+            return 99; // Default for 'Member' or other/null roles
+        };
+
+        // Sort the unique subcommittees by role priority
+        uniqueSubcommittees.sort((a, b) => getRolePriority(a.role) - getRolePriority(b.role));
 
         return (
             <Card className={`member-profile-card ${partyClass}`}>
                 <Card.Header className="profile-header">
                     <Row className="align-items-center">
                         <Col className="text-center">
-                            <h2 className="h3 mb-0 text-white member-name-orbitron">{member.name}</h2>
+                            <h2 className="h3 mb-1 text-white member-name-orbitron">{member.name}</h2>
                             <div className="d-flex align-items-center justify-content-center mt-2">
                                 <Badge pill bg={badgeVariant} className="me-2">
                                     {member.party}
                                 </Badge>
-                                <span className="text-white opacity-90">{details}</span>
+                                <span className="text-white opacity-90" style={{ fontSize: '0.95rem' }}>
+                                    {member.state}
+                                    {(member.member_type === 'rep' || member.member_type === 'representative') && member.district && ` - District ${member.district}`}
+                                    {(member.member_type === 'sen' || member.member_type === 'senator') && member.state_rank && ` - ${member.state_rank.charAt(0).toUpperCase() + member.state_rank.slice(1)} Senator`}
+                                </span>
                             </div>
                         </Col>
                     </Row>
                 </Card.Header>
                 <Card.Body>
+                    {/* Row for Image (Left), General Info (Middle), Committees (Right) */}
                     <Row>
+                        {/* === Left Column: Image === */}
                         <Col md={4} className="text-center mb-4 mb-md-0">
                             <div className="profile-image-container">
                                 <Image
                                     src={currentImageUrl} 
                                     onError={(e) => {
                                         console.log("Image failed to load:", currentImageUrl);
-                                        e.target.onerror = null; // Prevent infinite loop if we reach the end
-                                        handleImageError(); // Try next variation on error
+                                        e.target.onerror = null; // Prevent infinite loop
+                                        handleImageError(); // Try next variation
                                     }}
                                     className="profile-image"
                                     style={{ 
-                                        width: '250px', 
-                                        height: '300px', 
+                                        width: '100%', 
+                                        maxWidth: '300px',
+                                        height: 'auto',
                                         objectFit: 'cover',
                                         backgroundColor: '#f0f0f0',
-                                        borderRadius: '8px'
+                                        borderRadius: '8px',
+                                        display: 'block', 
+                                        margin: '0 auto' 
                                     }}
                                     alt={`Portrait of ${member.name}`}
                                 />
                             </div>
                         </Col>
-                        <Col md={8}>
-                            <Row>
-                                <Col md={6}>
-                                    <h5 className="mb-3 text-white">Contact Information</h5>
-                                    <ListGroup variant="flush">
-                                        {member.office_address && (
-                                            <ListGroup.Item className="border-0 mb-2 rounded info-item" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                                                <span className="info-label">Office</span>
-                                                <span className="info-value">{member.office_address}</span>
-                                            </ListGroup.Item>
+                        
+                        {/* === Middle Column: General Information === */}
+                        <Col md={4} className="mb-4 mb-md-0">
+                            <h4 className="mb-3 text-white section-title">General Information</h4>
+                            <ListGroup variant="flush">
+                                {(member.term_start || member.term_end) && (
+                                    <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                        <span className="info-label">Current Term</span>
+                                        <span className="info-value">{member.term_start || '?'} to {member.term_end || '?'}</span>
+                                    </ListGroup.Item>
+                                )}
+                                {member.office_address && (
+                                    <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                        <span className="info-label">Office</span>
+                                        <span className="info-value">{member.office_address}</span>
+                                    </ListGroup.Item>
+                                )}
+                                {member.phone && (
+                                    <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                        <span className="info-label">Phone</span>
+                                        <span className="info-value">
+                                            <a href={`tel:${member.phone}`} className="text-white">{member.phone}</a>
+                                        </span>
+                                    </ListGroup.Item>
+                                )}
+                                {member.website && (
+                                    <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                        <span className="info-label">Website</span>
+                                        <span className="info-value">
+                                            <a href={member.website} target="_blank" rel="noopener noreferrer" className="text-white">{member.website}</a>
+                                        </span>
+                                    </ListGroup.Item>
+                                )}
+                                {/* Always show Contact Form item, conditionally show link */}
+                                <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                    <span className="info-label">Contact Form</span>
+                                    <span className="info-value">
+                                        {member.contact_form ? (
+                                            <a href={member.contact_form} target="_blank" rel="noopener noreferrer" className="text-white">Official Contact Form</a>
+                                        ) : (
+                                            <span></span> // Render empty span if no contact form URL
                                         )}
-                                        {member.phone && (
-                                            <ListGroup.Item className="border-0 mb-2 rounded info-item" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                                                <span className="info-label">Phone</span>
-                                                <span className="info-value">
-                                                    <a href={`tel:${member.phone}`} className="text-white">{member.phone}</a>
-                                                </span>
-                                            </ListGroup.Item>
-                                        )}
-                                        {member.website && (
-                                            <ListGroup.Item className="border-0 mb-2 rounded info-item" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                                                <span className="info-label">Website</span>
-                                                <span className="info-value">
-                                                    <a href={member.website} target="_blank" rel="noopener noreferrer" className="text-white">{member.website}</a>
-                                                </span>
-                                            </ListGroup.Item>
-                                        )}
-                                        {member.contact_form && (
-                                            <ListGroup.Item className="border-0 mb-2 rounded info-item" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                                                <span className="info-label">Contact Form</span>
-                                                <span className="info-value">
-                                                    <a href={member.contact_form} target="_blank" rel="noopener noreferrer" className="text-white">Online Form</a>
-                                                </span>
-                                            </ListGroup.Item>
-                                        )}
-                                    </ListGroup>
-                                </Col>
-                                <Col md={6}>
-                                    <h5 className="mb-3 text-white">Congressional Details</h5>
-                                    <ListGroup variant="flush">
-                                        <ListGroup.Item className="border-0 mb-2 rounded info-item" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                                            <span className="info-label">Bioguide ID</span>
-                                            <span className="info-value">{member.bioguide_id || 'N/A'}</span>
-                                        </ListGroup.Item>
-                                        {member.term_start && member.term_end && (
-                                            <ListGroup.Item className="border-0 mb-2 rounded info-item" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                                                <span className="info-label">Current Term</span>
-                                                <span className="info-value">{member.term_start} to {member.term_end}</span>
-                                            </ListGroup.Item>
-                                        )}
-                                        {member.member_type === 'senator' && member.senate_class && (
-                                            <ListGroup.Item className="border-0 mb-2 rounded info-item" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                                                <span className="info-label">Senate Class</span>
-                                                <span className="info-value">{member.senate_class}</span>
-                                            </ListGroup.Item>
-                                        )}
-                                        <ListGroup.Item className="border-0 mb-2 rounded info-item" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                                            <span className="info-label">Committees</span>
-                                            <span className="info-value">(Coming Soon)</span>
-                                        </ListGroup.Item>
-                                        <ListGroup.Item className="border-0 mb-2 rounded info-item" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                                            <span className="info-label">Recent Votes</span>
-                                            <span className="info-value">(Coming Soon)</span>
-                                        </ListGroup.Item>
-                                    </ListGroup>
-                                </Col>
-                            </Row>
+                                    </span>
+                                </ListGroup.Item>
+                                {/* Remove the previous conditional blocks for contact form */}
+                                {/* {(member.member_type === 'rep' || member.member_type === 'representative') && !member.contact_form && (...) } */}
+                                {member.bioguide_id && (
+                                    <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                        <span className="info-label">BioGuide ID</span>
+                                        <span className="info-value">{member.bioguide_id}</span>
+                                    </ListGroup.Item>
+                                )}
+                            </ListGroup>
+                        </Col>
+                        
+                        {/* === Right Column: Committee Assignments === */}
+                        <Col md={4}>
+                            {uniqueSubcommittees && uniqueSubcommittees.length > 0 ? (
+                                <>
+                                    <h4 className="mb-3 text-white section-title">Committee Assignments</h4>
+                                    {/* Scrollable container */}
+                                    <div className="committee-scroll-container"> 
+                                        <ListGroup className="committee-assignments-list">
+                                            {uniqueSubcommittees.map((committee, index) => (
+                                                <ListGroup.Item 
+                                                    key={`${committee.committee_id}-${index}`}
+                                                    className="bg-transparent text-white border-secondary committee-item-profile"
+                                                >
+                                                    <div className="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <strong>{committee.name}</strong>
+                                                            {committee.is_subcommittee && (
+                                                                <div className="text-muted small">
+                                                                    {committee.parent_committee}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {committee.role && committee.role !== 'Member' && (
+                                                            <Badge 
+                                                                bg={committee.role === 'Chairman' ? 'primary' : 
+                                                                    committee.role === 'Ranking Member' ? 'info' : 'secondary'}
+                                                                className="ms-2"
+                                                            >
+                                                                {committee.role}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                </ListGroup.Item>
+                                            ))}
+                                        </ListGroup>
+                                    </div>
+                                </> 
+                            ) : (
+                                <div className="text-center text-white-50 mt-4">
+                                    No current committee assignments found.
+                                </div>
+                            )}
                         </Col>
                     </Row>
                 </Card.Body>
@@ -729,11 +913,11 @@ function AdvancedProfile() {
         );
     };
 
-
     // Main component rendering logic
     return (
-        <Container className="advanced-profile-container">
+        <Container className="advanced-view-container">
             <div className="search-section">
+                <h2>Advanced Member Search</h2>
                 {renderSearchForm()}
             </div>
 
@@ -769,4 +953,4 @@ function AdvancedProfile() {
     );
 }
 
-export default AdvancedProfile; 
+export default AdvancedView; 

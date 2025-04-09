@@ -22,7 +22,8 @@ from .core import (
     find_representative,
     find_senators,
     find_member_by_id,
-    STATE_CODE_TO_NAME
+    STATE_CODE_TO_NAME,
+    get_all_committees
 )
 from .db import get_db_connection, Token, TokenData, User, UserCreate, UserInDB
 
@@ -214,7 +215,8 @@ async def search_members(
     state: Optional[str] = None,
     party: Optional[str] = None,
     type: Optional[str] = None,
-    district: Optional[str] = None
+    district: Optional[str] = None,
+    committee: Optional[str] = None
 ):
     """
     Search for congress members based on various criteria.
@@ -225,6 +227,7 @@ async def search_members(
     - party: Filter by party (exact match)
     - type: Filter by type (rep/sen)
     - district: Filter by district (for representatives only)
+    - committee: Filter by committee ID
     """
     # Collect all members first based on type
     if type == "rep":
@@ -244,42 +247,96 @@ async def search_members(
         if not normalized_state:
             normalized_state = state
     
+    # Debug info for committee filter
+    if committee:
+        print(f"Filtering by committee: {committee}")
+        # Count members with committees data
+        members_with_committees = sum(1 for m in results if m.get("committees"))
+        print(f"Members with committee data: {members_with_committees} out of {len(results)}")
+        
+        # Check if any members have this specific committee
+        matching_committee = []
+        for m in results:
+            if m.get("committees"):
+                for c in m["committees"]:
+                    if c.get("committee_id") == committee:
+                        matching_committee.append(m.get("name", "Unknown"))
+                        break
+        
+        if matching_committee:
+            print(f"Found {len(matching_committee)} members on committee {committee}: {', '.join(matching_committee[:5])}" + 
+                  (f"... and {len(matching_committee) - 5} more" if len(matching_committee) > 5 else ""))
+        else:
+            print(f"No members found for committee {committee}")
+            
+            # Check if this committee exists in our data
+            from .core import committee_data
+            if committee in committee_data['committees']:
+                print(f"Committee exists in data but no members found: {committee_data['committees'][committee]['name']}")
+            else:
+                print(f"Committee ID not found in committee data: {committee}")
+    
     # Apply filters
     filtered_results = []
     for member in results:
         # Name filter (case-insensitive partial match)
-        if name and name.lower() not in member["name"].lower():
+        if name and name.lower() not in member.get("name", "").lower():
+            continue
+        
+        # State filter
+        if normalized_state and normalized_state != member.get("state"):
+            continue
+        
+        # Party filter
+        if party and party != member.get("party"):
+            continue
+        
+        # District filter (reps only)
+        if district is not None and district != "" and member.get("district") != district:
             continue
             
-        # State filter (case-insensitive match)
-        if normalized_state and normalized_state.lower() != member["state"].lower():
-            continue
+        # Committee filter
+        if committee and committee.strip():
+            # Check if member belongs to specified committee
+            has_committee = False
+            member_committees = member.get("committees", [])
             
-        # Party filter (case-insensitive match)
-        if party and party.lower() != member["party"].lower():
-            continue
+            # Enhanced committee matching to handle possible format differences
+            for c in member_committees:
+                member_committee_id = c.get("committee_id", "")
+                
+                # Direct match
+                if member_committee_id == committee:
+                    has_committee = True
+                    print(f"MATCH: {member.get('name')} is on committee {committee}")
+                    break
+                    
+                # Try case-insensitive match
+                if member_committee_id.lower() == committee.lower():
+                    has_committee = True
+                    print(f"CASE MATCH: {member.get('name')} is on committee {committee}")
+                    break
             
-        # District filter (for representatives only)
-        if district:
-            # Only apply to representatives who have district field
-            if "district" not in member:
-                continue
+            if not has_committee and len(member_committees) > 0:
+                # Print committees for debugging if the member has committees but not this one
+                committee_ids = [c.get('committee_id', '') for c in member_committees]
+                if len(committee_ids) <= 5:  # Only log if there aren't too many
+                    print(f"NO MATCH: {member.get('name')} has committees {committee_ids} but not {committee}")
             
-            member_district = str(member["district"]).lower()
-            search_district = str(district).lower()
-            
-            # Handle "At-Large" case - various forms
-            if search_district in ["0", "at-large", "at large", "atl", "at-l"]:
-                if member_district not in ["0", "at-large", "at large"]:
-                    continue
-            # Normal district number comparison
-            elif member_district != search_district:
+            if not has_committee:
                 continue
         
         filtered_results.append(member)
     
+    if committee:
+        print(f"After committee filtering: {len(filtered_results)} members")
+        
     return filtered_results
 
+@router.get("/congress/committees", response_model=List[Dict[str, Any]], tags=["congress"])
+async def get_committees():
+    """Get all committees for dropdown selection"""
+    return get_all_committees()
 
 @router.get("/congress/member/{member_id}", response_model=Dict[str, Any], tags=["congress"])
 async def get_member_by_id(member_id: str):

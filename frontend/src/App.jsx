@@ -14,7 +14,7 @@ import Representatives from './pages/Representatives'
 import Senate from './pages/Senate'
 import Contact from './pages/Contact'
 import AdminPage from './pages/AdminPage'
-import AdvancedProfile from './pages/AdvancedProfile'
+import AdvancedView from './pages/AdvancedView'
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -213,8 +213,8 @@ function App() {
           <Route path="/senate" element={<Senate />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/admin" element={<AdminPage />} />
-          <Route path="/advanced-profile" element={<AdvancedProfile />} />
-          <Route path="/advanced-profile/:memberId" element={<AdvancedProfile />} />
+          <Route path="/advanced-view" element={<AdvancedView />} />
+          <Route path="/advanced-profile/:memberId" element={<AdvancedView />} />
         </Routes>
       </main>
 

@@ -1,11 +1,11 @@
 /* Advanced Profile Page Styles */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap');
 
-.advanced-profile-container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
+.advanced-view-container {
+  width: 95%; /* Use percentage width */
+  max-width: 1600px; /* Optional: Add a max pixel width if needed */
+  margin: 0 auto; /* Center the container */
+  padding: 2rem 1rem; /* Keep some padding */
   background-color: transparent;
   color: #333;
   min-height: calc(100vh - 80px);
@@ -40,14 +40,21 @@
   background-color: #1e3a5f; /* Navy blue background */
   padding: 1.5rem;
   margin-bottom: 2rem;
+  margin-top: 2rem; /* Add top margin to push it down */
   border-radius: 0.75rem;
   box-shadow: 0 6px 12px rgba(0,0,0,0.2);
 }
 
 .search-section h2 {
   margin-top: 0;
-  margin-bottom: 0.5rem;
-  font-size: 1.25rem;
+  margin-bottom: 1rem; /* Keep some space below */
+  padding: 0; /* Remove padding */
+  font-family: 'Orbitron', sans-serif; /* Use Orbitron font */
+  font-size: 1.1rem; /* Make font smaller */
+  color: white; /* Keep white color */
+  text-align: center;
+  background-color: transparent; /* Remove temporary background */
+  font-weight: 500; /* Adjust weight if needed */
 }
 
 /* Consistent input heights and styling */
@@ -183,6 +190,7 @@
 
 .profile-image-container {
   margin-bottom: 1.5rem;
+  margin-top: 0.5rem; /* Reduced top margin to move image up slightly */
   padding: 0.5rem;
   position: relative;
 }
@@ -205,28 +213,58 @@
   color: white;
 }
 
-.member-profile-card .list-group-item {
-  color: white;
-  padding: 0.75rem 1rem;
-  background-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.member-profile-card .list-group-item strong {
-  display: inline-block;
-  min-width: 120px;
+/* New label and value styling */
+.info-label {
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
-  margin-right: 3px;
+  position: relative;
+  white-space: nowrap;
 }
 
-.member-profile-card .list-group-item a {
-  color: #add8e6; /* Light blue */
+.info-label::after {
+  content: ':';
+  margin-left: 2px;
+  margin-right: 0.5rem;
+}
+
+.info-value {
+  word-break: break-word;
+}
+
+.info-value a {
+  color: #add8e6; /* Light blue for links */
   text-decoration: none;
 }
 
-.member-profile-card .list-group-item a:hover {
-  color: white;
+.info-value a:hover {
+  color: #ffffff;
   text-decoration: underline;
+}
+
+.info-value .badge {
+  font-size: 0.9em;
+}
+
+/* Committee Assignments Styling within Profile */
+.committee-assignments-list .list-group-item {
+  /* Inherit some styling but override background/padding */
+  background-color: rgba(0, 0, 0, 0.15) !important; /* Darker background for committee items */
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important; /* Subtle border */
+}
+
+.committee-assignments-list .list-group-item strong {
+   color: white; 
+   font-weight: 500; /* Slightly less bold than labels */
+}
+
+.committee-assignments-list .list-group-item .text-muted {
+  color: rgba(255, 255, 255, 0.7) !important; /* Lighter muted text */
+}
+
+.committee-assignments-list .list-group-item .badge {
+  font-size: 0.85rem;
 }
 
 /* Results styling */
@@ -253,6 +291,7 @@
 .search-results .list-group-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+  background-color: #1e3a5f !important; /* Keep original background color on hover */
 }
 
 .search-results .list-group-item img {
@@ -517,22 +556,29 @@ img.rounded-circle {
 .info-item {
   display: flex;
   align-items: flex-start;
+  /* Apply exact styles from committee items */
+  background-color: rgba(0, 0, 0, 0.15) !important; /* Match committee background */
+  padding: 0.75rem 1rem !important; /* Match committee padding */
+  margin-bottom: 0.5rem !important; /* Match committee margin */
+  border: 1px solid rgba(255, 255, 255, 0.15) !important; /* Match committee border */
+  border-radius: 6px !important; /* Match committee radius */
+  color: white; /* Ensure text color is white */
 }
 
 .info-label {
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
-  min-width: 120px;
   position: relative;
+  white-space: nowrap;
 }
 
 .info-label::after {
   content: ':';
+  margin-left: 2px;
   margin-right: 0.5rem;
 }
 
 .info-value {
-  flex: 1;
   word-break: break-word;
 }
 
@@ -551,7 +597,7 @@ img.rounded-circle {
 .button-container {
   display: flex !important;
   flex-direction: row !important;
-  gap: 10px !important;
+  gap: 15px !important; /* Increased gap for more spacing */
   height: 50px; /* Match input height */
 }
 
@@ -560,25 +606,89 @@ img.rounded-circle {
   white-space: nowrap;
 }
 
-/* Search container flexbox styling */
+/* Search container flexbox styling - update to accommodate the new committee dropdown */
 .search-container {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: nowrap; /* Force items onto one line */
   gap: 15px;
   align-items: flex-end;
   width: 100%;
 }
 
 .search-container > div {
-  flex: 1 1 0;
+  flex: 1 1 200px; /* Each element is at least 200px */
 }
 
 /* Name input gets more space */
 .search-container > div:first-child {
-  flex: 2 1 0;
+  flex: 2 1 250px; /* Name field is wider */
 }
 
 /* Buttons container needs fixed width */
 .search-container > div:last-child {
   flex: 0 0 auto;
+}
+
+/* Committee section styling */
+.committee-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: rgba(30, 58, 95, 0.5);
+  border-radius: 0.75rem;
+}
+
+.committee-item {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s ease;
+}
+
+.committee-item:hover {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.committee-role {
+  font-weight: 500;
+  padding: 0.35rem 0.65rem;
+  border-radius: 1rem;
+}
+
+.committee-parent {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+/* Committee section scroll container */
+.committee-scroll-container {
+  max-height: 338px; /* Restore fixed max-height */
+  overflow-y: auto; /* Keep vertical scroll */
+  /* Remove flex properties */
+  /* flex: 1; */
+  /* min-height: 50px; */
+  
+  padding-right: 10px; 
+  margin-right: -10px; 
+}
+
+/* Style scrollbar (optional, for Webkit browsers) */
+.committee-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.committee-scroll-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.committee-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.committee-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 } 

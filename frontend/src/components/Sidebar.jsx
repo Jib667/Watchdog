@@ -69,8 +69,8 @@ const Sidebar = ({ isOpen, onClose, user }) => {
               </NavLink>
             </li>
             <li>
-              <NavLink to="/advanced-profile" className={({ isActive }) => `sidebar-link ${isActive ? "active-link" : ""}`} onClick={onClose}>
-                Advanced Profile
+              <NavLink to="/advanced-view" className={({ isActive }) => `sidebar-link ${isActive ? "active-link" : ""}`} onClick={onClose}>
+                Advanced View
               </NavLink>
             </li>
             <li>
