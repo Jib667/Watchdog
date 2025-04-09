@@ -35,7 +35,7 @@
   margin-bottom: 1.5rem;
 }
 
-/* Search Section */
+/* Search Section with improved styling */
 .search-section {
   background-color: #1e3a5f; /* Navy blue background */
   padding: 1.5rem;
@@ -50,13 +50,33 @@
   font-size: 1.25rem;
 }
 
+/* Consistent input heights and styling */
+.search-container input,
+.search-container select,
+.search-container button {
+  height: 50px; /* Consistent height for all elements */
+  border-radius: 20px;
+  font-size: 1rem;
+}
+
 /* Form field styling */
 .search-section .form-control,
 .search-section .form-select {
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.25rem;
+  border-radius: 20px;
   background-color: rgba(255, 255, 255, 0.1);
   color: white;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  height: 50px; /* Match button height */
+}
+
+/* Style the name input with a search icon */
+.search-section .form-control[placeholder="Enter Member Name"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='rgba(255,255,255,0.6)' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 15px center;
+  padding-left: 2.5rem; /* Make room for the icon */
 }
 
 .search-section .form-control::placeholder {
@@ -71,31 +91,42 @@
   color: white;
 }
 
-/* Search button styling */
-.search-section .btn-primary {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: white;
+/* Search button styling - Updated to match action-button style */
+.search-section .btn-primary,
+.search-section .btn-secondary {
+  border-radius: 20px;
+  padding: 0.5rem 1.25rem;
   font-weight: 500;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+  background-color: #2a6ca9;
+  border-color: #2a6ca9;
+  color: white;
+  height: 50px; /* Match input height */
+  min-width: 100px; /* Ensure buttons have enough width */
 }
 
 .search-section .btn-primary:hover,
-.search-section .btn-primary:focus {
-  background-color: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.4);
+.search-section .btn-primary:focus,
+.search-section .btn-secondary:hover,
+.search-section .btn-secondary:focus {
+  background-color: #1e4f7a;
+  border-color: #1e4f7a;
+  color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
 }
 
+/* Style secondary button differently (e.g., Clear button) */
 .search-section .btn-secondary {
-  background-color: rgba(0, 0, 0, 0.2);
-  border-color: rgba(0, 0, 0, 0.1);
-  color: rgba(255, 255, 255, 0.8);
+  background-color: #6c757d;
+  border-color: #6c757d;
 }
 
 .search-section .btn-secondary:hover,
 .search-section .btn-secondary:focus {
-  background-color: rgba(0, 0, 0, 0.3);
-  border-color: rgba(0, 0, 0, 0.2);
-  color: white;
+  background-color: #5a6268;
+  border-color: #545b62;
 }
 
 /* Member Profile Styling */
@@ -514,4 +545,40 @@ img.rounded-circle {
   .info-label {
     margin-bottom: 0.25rem;
   }
+}
+
+/* Button container to force horizontal layout at all screen sizes */
+.button-container {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 10px !important;
+  height: 50px; /* Match input height */
+}
+
+.button-container button {
+  flex: 0 0 auto;  /* Don't allow buttons to grow/shrink */
+  white-space: nowrap;
+}
+
+/* Search container flexbox styling */
+.search-container {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 15px;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.search-container > div {
+  flex: 1 1 0;
+}
+
+/* Name input gets more space */
+.search-container > div:first-child {
+  flex: 2 1 0;
+}
+
+/* Buttons container needs fixed width */
+.search-container > div:last-child {
+  flex: 0 0 auto;
 } 

@@ -439,9 +439,9 @@ function AdvancedProfile() {
     // Render the search form
     const renderSearchForm = () => (
         <Form onSubmit={handleSearchSubmit} className="mb-4">
-            {/* Removed Title: <h2>Search for a Member</h2> */}
-            <Row className="g-2 align-items-end"> {/* Use g-2 for smaller gutters */}
-                <Col md={4} xs={12}>
+            <div className="search-container">
+                {/* Member Name Input */}
+                <div>
                     <Form.Group controlId="formMemberName">
                         <Form.Label visuallyHidden>Member Name</Form.Label>
                         <Form.Control
@@ -452,9 +452,11 @@ function AdvancedProfile() {
                             onChange={handleSearchChange}
                         />
                     </Form.Group>
-                </Col>
-                <Col md={2} xs={6}>
-                     <Form.Group controlId="formMemberType">
+                </div>
+                
+                {/* Member Type Select */}
+                <div>
+                    <Form.Group controlId="formMemberType">
                         <Form.Label visuallyHidden>Member Type</Form.Label>
                         <Form.Select name="memberType" value={searchTerm.memberType} onChange={handleSearchChange}>
                             <option value="">Any Type</option>
@@ -462,54 +464,59 @@ function AdvancedProfile() {
                             <option value="sen">Senator</option>
                         </Form.Select>
                     </Form.Group>
-                </Col>
-                 <Col md={2} xs={6}>
+                </div>
+                
+                {/* State Select */}
+                <div>
                     <Form.Group controlId="formState">
-                         <Form.Label visuallyHidden>State</Form.Label>
+                        <Form.Label visuallyHidden>State</Form.Label>
                         <Form.Select name="state" value={searchTerm.state} onChange={handleSearchChange} disabled={!states.length}>
                             <option value="">Any State</option>
                             {Array.isArray(states) && states.map(s => <option key={s} value={s}>{s}</option>)}
-                             {!states.length && <option>Loading States...</option>}
+                            {!states.length && <option>Loading States...</option>}
                         </Form.Select>
                     </Form.Group>
-                </Col>
-                 {/* Conditionally render District field only if Member Type is Representative */}
-                 {searchTerm.memberType === 'rep' && (
-                    <Col md={1} xs={4}>
-                        <Form.Group controlId="formDistrict">
-                            <Form.Label visuallyHidden>District</Form.Label>
-                            <Form.Control
-                                type="text" // Or number, depending on expected input
-                                placeholder="Dist"
-                                name="district"
-                                value={searchTerm.district}
-                                onChange={handleSearchChange}
-                                disabled={searchTerm.memberType !== 'rep'} // Disable if not rep
-                            />
-                        </Form.Group>
-                    </Col>
-                 )}
-                <Col md={searchTerm.memberType === 'rep' ? 1 : 2} xs={searchTerm.memberType === 'rep' ? 4 : 6}> {/* Adjust width based on district field visibility */}
+                </div>
+                
+                {/* Party Select */}
+                <div>
                     <Form.Group controlId="formParty">
-                         <Form.Label visuallyHidden>Party</Form.Label>
+                        <Form.Label visuallyHidden>Party</Form.Label>
                         <Form.Select name="party" value={searchTerm.party} onChange={handleSearchChange}>
                             <option value="">Any Party</option>
                             <option value="Democrat">Democrat</option>
                             <option value="Republican">Republican</option>
                             <option value="Independent">Independent</option>
-                            {/* Add other parties if needed */}
                         </Form.Select>
                     </Form.Group>
-                </Col>
-                <Col md="auto" xs={4}> {/* Use auto width for buttons */}
-                    <Button variant="primary" type="submit" disabled={isSearching} className="w-100">
+                </div>
+                
+                {/* Buttons */}
+                <div className="button-container">
+                    <Button variant="primary" type="submit" disabled={isSearching}>
                         {isSearching ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : 'Search'}
                     </Button>
-                </Col>
-                 <Col md="auto" xs={4}>
-                    <Button variant="secondary" onClick={handleClearSearch} className="w-100">Clear</Button>
-                </Col>
-            </Row>
+                    <Button variant="secondary" onClick={handleClearSearch}>
+                        Clear
+                    </Button>
+                </div>
+            </div>
+            
+            {/* Conditionally render District field in a separate row if needed */}
+            {searchTerm.memberType === 'rep' && (
+                <div className="mt-2">
+                    <Form.Group controlId="formDistrict">
+                        <Form.Label visuallyHidden>District</Form.Label>
+                        <Form.Control
+                            type="text"
+                            placeholder="District"
+                            name="district"
+                            value={searchTerm.district}
+                            onChange={handleSearchChange}
+                        />
+                    </Form.Group>
+                </div>
+            )}
         </Form>
     );
 
