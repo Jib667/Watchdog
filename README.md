@@ -10,7 +10,7 @@ Watchdog is a web application designed to provide citizens with accessible infor
         *   `core.py`: Handles loading and processing data from local static files.
         *   `api.py`: Defines the API endpoints.
         *   `static/congress_data/`: Stores the downloaded legislator/committee YAML data files and the processed bill/vote data copied from the congress tools.
-            *   `*.yaml`: Legislator, Committee, Membership YAML files.
+            *   `*.yaml`: **(Locally Updated Only)** Legislator, Committee, Membership YAML files. Ignored by Git.
             *   `congress/<congress_num>/`: Contains processed Bill and Vote data (JSON/XML).
     *   `update_congress_members_data.py`: Script to download the latest legislator/committee YAML data files.
     *   `update_bill_vote_data.py`: Script to manage the `congress_tools` and generate/copy bill/vote data.
@@ -28,8 +28,9 @@ Watchdog is a web application designed to provide citizens with accessible infor
 The primary source for congressional member and committee data is the open-source `unitedstates/congress-legislators` repository:
 [https://github.com/unitedstates/congress-legislators](https://github.com/unitedstates/congress-legislators)
 
-The source for bill and vote data collection tools is the `unitedstates/congress` repository:
+Bill and vote data is generated using tools from the `unitedstates/congress` repository:
 [https://github.com/unitedstates/congress](https://github.com/unitedstates/congress)
+This generated data (for Congresses 94-119) is included directly in this repository under `backend/app/static/congress_data/congress/` to allow the application to run without requiring the lengthy initial data generation process.
 
 ## Getting Started
 
@@ -80,13 +81,13 @@ The source for bill and vote data collection tools is the `unitedstates/congress
     ```
     *(This includes the `requests` library needed for the member update script.)*
 
-5.  **Download/Generate Initial Congressional Data:**
-    Run the two update scripts. **Note:** `update_bill_vote_data.py` can take a very long time on its first run as it processes historical data.
+5.  **(Optional) Update Congressional Data:**
+    The repository includes pre-processed bill and vote data. You only need to run the update scripts if you want to refresh the data.
     ```bash
     python update_congress_members_data.py # Fetches legislator/committee YAMLs
     python update_bill_vote_data.py      # Clones tools, generates & copies bill/vote data
     ```
-    *(These scripts populate `backend/app/static/congress_data/` and create the local `congress_tools/` directory respectively.)*
+    *(See "Updating Congressional Data" section below for details. The bill/vote update can take a very long time.)*
 
 6.  **Configure Environment (If applicable):**
     If your project uses a `.env` file for configuration (e.g., for secrets or API keys if added later), copy `.env.example` to `.env` and fill in the required values.
@@ -122,16 +123,18 @@ The source for bill and vote data collection tools is the `unitedstates/congress
 
 ## Updating Congressional Data
 
-To update the local data files:
+The repository contains historical bill and vote data. To refresh this data or update legislator information, follow these steps:
 
 1.  Navigate to the `backend` directory.
 2.  Ensure your Python virtual environment is active (`source venv/bin/activate` or equivalent).
-3.  Run the desired update script(s):
+3.  Run the desired update script(s). **Warning:** Running `update_bill_vote_data.py` will re-generate data for Congresses 94-119 and can take many hours. It's typically only needed for major updates. Subsequent runs only update the latest Congress.
     ```bash
+    # Run this for quick legislator/committee updates:
     python update_congress_members_data.py # Update legislator/committee YAMLs (quick)
+    # Run this ONLY if you need to refresh historical bill/vote data (VERY SLOW):
     python update_bill_vote_data.py      # Update bills/votes for recent Congress (can be slow)
     ```
-    *Note: The `update_bill_vote_data.py` script manages the `congress_tools/` directory locally and copies the generated data to `backend/app/static/congress_data/congress/`. Remember to commit changes to the copied data in `backend/app/static/congress_data/congress/` if you want to include updated bill/vote data in the repository.*
+    *Note: The `update_congress_members_data.py` script updates YAML files which are ignored by Git. The `update_bill_vote_data.py` script manages the local `congress_tools/` directory and copies generated data to `backend/app/static/congress_data/congress/`. If you run the bill/vote update, remember to **commit the changes** within `backend/app/static/congress_data/congress/` to update the data included in the repository.*
 
 4.  Restart the backend server (Uvicorn with `--reload` should restart automatically, but a manual restart ensures the new data is loaded if `--reload` isn't used or fails).
 
