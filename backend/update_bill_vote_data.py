@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import shutil
+from datetime import date # Import date
 
 # --- Configuration ---
 # Repository to clone
@@ -16,8 +17,8 @@ CONGRESS_TOOLS_DIR = os.path.join(WATCHDOG_ROOT_DIR, "congress_tools")
 # Virtual environment name within the congress_tools directory
 VENV_NAME = "env"
 
-# Congress numbers to fetch data for (94th through 119th)
-CONGRESS_NUMBERS = [str(i) for i in range(94, 120)] # Generates ["94", "95", ..., "119"]
+# Start Congress number for historical data
+HISTORICAL_START_CONGRESS = 101
 
 # Data types to fetch
 DATA_TYPES = ["bills", "votes"]
@@ -122,6 +123,30 @@ def copy_generated_data(congress_number):
         print_color(RED, f"Error copying data from {source_data_dir} to {target_data_dir}: {e}")
         return False
 
+def calculate_current_congress() -> int:
+    """Calculates the current Congress number based on today's date."""
+    today = date.today()
+    year = today.year
+    month = today.month
+    day = today.day
+
+    # Determine the starting year of the current Congress term
+    if year % 2 != 0: # Odd year
+        if month == 1 and day < 3:
+            # It's early Jan of an odd year, the previous Congress is just ending
+            start_year = year - 2
+        else:
+            # It's later in an odd year, this Congress started this year
+            start_year = year
+    else: # Even year
+        # The current Congress started the previous odd year
+        start_year = year - 1
+
+    # Calculate Congress number (1st Congress started in 1789)
+    # N = floor((start_year - 1789) / 2) + 1
+    congress_number = ((start_year - 1789) // 2) + 1
+    return congress_number
+
 def main():
     print_color(GREEN, "--- Starting Bill/Vote Data Update Process ---")
 
@@ -161,18 +186,24 @@ def main():
         sys.exit(1)
 
     # --- Determine Congresses to Process --- 
-    current_congress_num = CONGRESS_NUMBERS[-1] # Get the latest congress number (e.g., "119")
-    marker_dir = os.path.join(WATCHDOG_DATA_DIR, 'congress', current_congress_num)
+    actual_current_congress = calculate_current_congress()
+    actual_current_congress_str = str(actual_current_congress)
+    print_color(YELLOW, f"Calculated current Congress: {actual_current_congress_str}")
+
+    # Define the full historical range dynamically up to the current calculated Congress
+    full_historical_congress_numbers = [str(i) for i in range(HISTORICAL_START_CONGRESS, actual_current_congress + 1)]
+
+    marker_dir = os.path.join(WATCHDOG_DATA_DIR, 'congress', actual_current_congress_str)
     
     congresses_to_process = []
     if os.path.isdir(marker_dir):
-        print_color(YELLOW, f"Marker directory '{marker_dir}' found. Assuming subsequent run.")
-        print_color(YELLOW, f"Updating only the current Congress: {current_congress_num}")
-        congresses_to_process = [current_congress_num]
+        print_color(YELLOW, f"Marker directory for current Congress ('{marker_dir}') found. Assuming subsequent run.")
+        print_color(YELLOW, f"Updating only the current Congress: {actual_current_congress_str}")
+        congresses_to_process = [actual_current_congress_str]
     else:
         print_color(YELLOW, f"Marker directory '{marker_dir}' not found. Performing initial historical run.")
-        print_color(YELLOW, f"Processing Congresses: {CONGRESS_NUMBERS[0]} through {current_congress_num}")
-        congresses_to_process = CONGRESS_NUMBERS # Process the full range
+        print_color(YELLOW, f"Processing Congresses: {full_historical_congress_numbers[0]} through {actual_current_congress_str}")
+        congresses_to_process = full_historical_congress_numbers # Process the full range
 
     # --- Step 4: Run Data Collection --- 
     print_color(YELLOW, f"\n--- Step 4: Running data collection for designated Congresses ---")

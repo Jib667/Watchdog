@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation, useParams, Link, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Spinner, Alert, Badge, ListGroup, Image } from 'react-bootstrap';
 import './AdvancedView.css'; // Updated CSS import
@@ -724,23 +724,329 @@ function AdvancedView() {
         </div>
     );
 
-     // Render member profile details with committee information
+    // --- Add State for Vote History ---
+    const [voteHistory, setVoteHistory] = useState([]);
+    const [loadingVotes, setLoadingVotes] = useState(false);
+    const [voteError, setVoteError] = useState('');
+    // --- End Vote History State ---
+    
+    // --- Add State for Vote Year Filter ---
+    const [selectedVoteYear, setSelectedVoteYear] = useState('All');
+    // --- End Vote Year Filter State ---
+
+    // --- Add State for Bill/Keyword Filter ---
+    const [filterBillNumber, setFilterBillNumber] = useState('');
+    const [filterKeyword, setFilterKeyword] = useState('');
+    // --- End Bill/Keyword Filter State ---
+
+    // --- Calculate available vote years ---
+    const availableVoteYears = useMemo(() => {
+        console.log("[VOTE_YEARS] Recalculating available years from voteHistory length:", voteHistory.length);
+        const yearSet = new Set();
+        let invalidDateCount = 0;
+        
+        voteHistory.forEach((vote, index) => {
+            if (!vote.date) {
+                // console.log(`[VOTE_YEARS_DETAIL] Vote index ${index}: Missing date`);
+                return;
+            }
+            try {
+                const dateObj = new Date(vote.date);
+                const year = dateObj.getFullYear(); // Get year regardless of validity for logging
+                
+                // Detailed Log for EVERY vote (will be verbose!)
+                // console.log(`[VOTE_YEARS_DETAIL] Vote index ${index}: Date='${vote.date}', ParsedYear=${year}, IsNaN=${isNaN(dateObj.getTime())}`);
+                
+                if (!isNaN(dateObj.getTime())) {
+                    yearSet.add(year);
+                } else {
+                    invalidDateCount++;
+                    // Only log invalid dates once to avoid flooding console
+                    if (invalidDateCount < 10) { // Log first few invalid dates
+                         console.warn(`[VOTE_YEARS] Invalid date format encountered: ${vote.date} for vote_id: ${vote.vote_id || 'N/A'}`); 
+                    }
+                }
+            } catch (e) { 
+                 console.error(`[VOTE_YEARS] Error parsing date string: ${vote.date}`, e);
+                 invalidDateCount++;
+            }
+        });
+        
+        if (invalidDateCount >= 10) {
+             console.warn(`[VOTE_YEARS] ... and ${invalidDateCount - 9} more invalid date formats encountered.`);
+        }
+        
+        const sortedYears = Array.from(yearSet).sort((a, b) => b - a);
+        console.log("[VOTE_YEARS] Final calculated unique years (using Set):", sortedYears); // Log the final list
+        return sortedYears;
+    }, [voteHistory]);
+    // --- End Calculate Vote Years ---
+
+    // --- Filtering Logic (moved outside render function) ---
+    const filteredVotes = useMemo(() => {
+        console.log(`[VOTE_FILTER] Filtering votes. Year: ${selectedVoteYear}, Bill: ${filterBillNumber}, Keyword: ${filterKeyword}`); // DEBUG
+        let votesToFilter = voteHistory;
+
+        // Filter by Year
+        if (selectedVoteYear !== 'All') {
+            const targetYear = parseInt(selectedVoteYear);
+            votesToFilter = votesToFilter.filter(vote => {
+                if (!vote.date) return false;
+                try {
+                    const voteYear = new Date(vote.date).getFullYear();
+                    const match = voteYear === targetYear;
+                    // if (!match && voteYear > 2006) { // Add more specific logging if needed
+                    //    console.log(`[VOTE_FILTER_MISMATCH] Vote Year: ${voteYear}, Target Year: ${targetYear}, Date: ${vote.date}`);
+                    // }
+                    return match;
+                } catch (e) {
+                    console.error("Error parsing date for filtering:", vote.date, e);
+                    return false;
+                }
+            });
+        }
+
+        // Filter by Bill Number (case-insensitive, partial match)
+        if (filterBillNumber.trim()) {
+            const lowerFilterBill = filterBillNumber.trim().toLowerCase();
+            votesToFilter = votesToFilter.filter(vote => 
+                (vote.bill_number && vote.bill_number.toLowerCase().includes(lowerFilterBill)) ||
+                (vote.bill_type && vote.bill_type.toLowerCase().includes(lowerFilterBill)) // Also check type (e.g., HR, S)
+            );
+        }
+
+        // Filter by Keyword (case-insensitive, partial match in question or description)
+        if (filterKeyword.trim()) {
+            const lowerFilterKeyword = filterKeyword.trim().toLowerCase();
+            votesToFilter = votesToFilter.filter(vote => 
+                (vote.question && vote.question.toLowerCase().includes(lowerFilterKeyword)) ||
+                (vote.description && vote.description.toLowerCase().includes(lowerFilterKeyword))
+            );
+        }
+        
+        console.log(`[VOTE_FILTER] Filtered votes count after all filters: ${votesToFilter.length}`); // DEBUG
+        return votesToFilter;
+    }, [voteHistory, selectedVoteYear, filterBillNumber, filterKeyword]);
+    // --- End Filtering Logic ---
+
+    // --- Add useEffect to Fetch Vote History ---
+    useEffect(() => {
+        const fetchVoteHistory = async () => {
+            if (member && member.bioguide_id) {
+                setLoadingVotes(true);
+                setVoteError('');
+                setVoteHistory([]); // Clear previous votes
+                console.log(`Fetching vote history for bioguide_id: ${member.bioguide_id}`);
+                try {
+                    const response = await fetch(`${API_URL}/api/members/${member.bioguide_id}/votes`);
+                    if (!response.ok) {
+                        // Handle specific errors if possible, e.g., 404 for no history
+                        if (response.status === 404) {
+                            setVoteError('No vote history found for this member.');
+                        } else {
+                            throw new Error(`HTTP error fetching votes! status: ${response.status}`);
+                        }
+                        setVoteHistory([]); // Ensure empty on error
+                    } else {
+                        const data = await response.json();
+                        console.log("Vote history fetched:", data);
+                        // --- DEBUG: Log dates of first/last few votes --- 
+                        if (Array.isArray(data) && data.length > 0) {
+                            const firstFewDates = data.slice(0, 5).map(v => v.date);
+                            const lastFewDates = data.slice(-5).map(v => v.date);
+                            console.log("[VOTE_DATE_CHECK] Dates of first 5 votes received:", firstFewDates);
+                            console.log("[VOTE_DATE_CHECK] Dates of last 5 votes received:", lastFewDates);
+                        }
+                        // --- END DEBUG ---
+                        if (Array.isArray(data)) {
+                            setVoteHistory(data);
+                            if (data.length === 0) {
+                                setVoteError('No vote history found for this member.'); // Explicit message if empty array returned
+                            }
+                        } else {
+                            console.error("Fetched vote history is not an array:", data);
+                            throw new Error("Invalid vote history format");
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch vote history:", err);
+                    setVoteError(err.message || 'Failed to load vote history.');
+                    setVoteHistory([]);
+                } finally {
+                    setLoadingVotes(false);
+                }
+            } else {
+                // Clear votes if no member or no bioguide_id
+                setVoteHistory([]);
+                setLoadingVotes(false);
+                setVoteError('');
+            }
+        };
+
+        fetchVoteHistory();
+    }, [member]); // Re-run when member changes
+    // --- End Vote History Fetch Effect ---
+
+    // --- Helper Function to Render Vote History ---
+    const renderVoteHistory = () => {
+        // console.log(`[VOTE_RENDER] Rendering votes. Selected year: ${selectedVoteYear}`); // DEBUG (No longer needed here)
+        // --- Filtering Logic MOVED OUTSIDE ---
+        // const filteredVotes = useMemo(() => { ... }, [voteHistory, selectedVoteYear]); // MOVED
+
+        if (loadingVotes) {
+            return (
+                <div className="text-center my-3">
+                    <Spinner animation="border" size="sm" />
+                    <p className="mt-1 small text-white-50">Loading Votes...</p>
+                </div>
+            );
+        }
+
+        // Show error message *before* checking filteredVotes length
+        if (voteError && voteHistory.length === 0) {
+            // Only show the main fetch error if we actually have no votes at all
+            return <p className="text-center text-warning small mt-3">{voteError}</p>;
+        }
+
+        // Handle case where votes exist but none match the selected year filter
+        if (!loadingVotes && voteHistory.length > 0 && filteredVotes.length === 0) {
+            return <p className="text-center text-white-50 small mt-3">No votes found for the year {selectedVoteYear}.</p>;
+        }
+
+        // If there was no initial fetch error, but the voteHistory array is empty, show the voteError message (e.g., "No vote history found")
+        if (!loadingVotes && voteHistory.length === 0 && voteError) {
+             return <p className="text-center text-warning small mt-3">{voteError}</p>;
+        }
+
+        // If loading is done, no error, and the original history is empty, return null quietly (should be caught by voteError usually)
+        if (!loadingVotes && voteHistory.length === 0 && !voteError) {
+             return null;
+        }
+
+        // Helper to format vote position with styling
+        const formatVotePosition = (position) => {
+            if (!position) return <span className="vote-position vote-other">N/A</span>;
+            const posLower = position.toLowerCase();
+            let className = 'vote-position';
+            if (posLower.includes('yea') || posLower.includes('yes') || posLower.includes('aye')) {
+                className += ' vote-yea';
+            } else if (posLower.includes('nay') || posLower.includes('no')) {
+                className += ' vote-nay';
+            } else {
+                className += ' vote-other'; // For Present, Not Voting, etc.
+            }
+            return <span className={className}>{position}</span>;
+        };
+
+        return (
+            <div className="vote-history-section">
+                {/* --- Filter Row --- */}
+                <Row className="mb-3 align-items-end">
+                    {/* Title */}
+                    <Col xs={12} md="auto" className="mb-2 mb-md-0">
+                        <h5 className="text-white section-title mb-0">Recent Vote History</h5>
+                    </Col>
+                    {/* Year Filter */}
+                    <Col xs={6} sm={4} md={2} className="mb-2 mb-md-0">
+                        {availableVoteYears.length > 0 && (
+                            <Form.Group controlId="voteYearFilter">
+                                <Form.Label visuallyHidden>Filter by Year</Form.Label>
+                                <Form.Select 
+                                    size="sm" 
+                                    value={selectedVoteYear} 
+                                    onChange={(e) => setSelectedVoteYear(e.target.value)}
+                                    aria-label="Filter votes by year"
+                                >
+                                    <option value="All">All Years</option>
+                                    {availableVoteYears.map(year => (
+                                        <option key={year} value={year}>{year}</option>
+                                    ))}
+                                </Form.Select>
+                            </Form.Group>
+                        )}
+                    </Col>
+                     {/* Bill Filter */}
+                    <Col xs={6} sm={4} md={3} className="mb-2 mb-md-0">
+                        <Form.Group controlId="voteBillFilter">
+                            <Form.Label visuallyHidden>Filter by Bill Number</Form.Label>
+                            <Form.Control 
+                                type="text" 
+                                size="sm" 
+                                placeholder="Bill (e.g., HR 22)"
+                                value={filterBillNumber}
+                                onChange={(e) => setFilterBillNumber(e.target.value)}
+                                aria-label="Filter votes by bill number"
+                            />
+                         </Form.Group>
+                    </Col>
+                    {/* Keyword Filter */}
+                    <Col xs={12} sm={4} md={4} className="mb-2 mb-md-0">
+                         <Form.Group controlId="voteKeywordFilter">
+                            <Form.Label visuallyHidden>Filter by Keyword</Form.Label>
+                            <Form.Control 
+                                type="text" 
+                                size="sm" 
+                                placeholder="Keyword (in question/desc)"
+                                value={filterKeyword}
+                                onChange={(e) => setFilterKeyword(e.target.value)}
+                                aria-label="Filter votes by keyword"
+                            />
+                        </Form.Group>
+                    </Col>
+                </Row>
+                {/* --- End Filter Row --- */}
+                
+                <div className="vote-scroll-container">
+                    <ListGroup variant="flush" className="vote-list">
+                        {filteredVotes.map((vote, index) => (
+                            <ListGroup.Item key={vote.vote_id || `vote-${index}`} className="vote-item bg-transparent border-secondary text-white">
+                                <div className="vote-details mb-1">
+                                    <span className="vote-date">{new Date(vote.date).toLocaleDateString()}</span>
+                                    <span className="vote-chamber mx-1">({vote.chamber || 'Chamber N/A'})</span>
+                                    {vote.bill_number && (
+                                        <span className="vote-bill">
+                                            {vote.bill_type?.toUpperCase() || ''} {vote.bill_number}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="vote-question mb-1">{vote.question}</div>
+                                {vote.description && (
+                                    <div className="vote-description text-white-50 mb-2">{vote.description}</div>
+                                )}
+                                <div className="vote-member-action">
+                                    <strong>Vote:</strong> {formatVotePosition(vote.member_vote_position)}
+                                    <span className="vote-result ms-2 text-white-50">({vote.result || 'Result N/A'})</span>
+                                </div>
+                                {vote.source_url && (
+                                    <div className="vote-source mt-1">
+                                        <a href={vote.source_url} target="_blank" rel="noopener noreferrer" className="small text-info">
+                                            View Source
+                                        </a>
+                                    </div>
+                                )}
+                            </ListGroup.Item>
+                        ))}
+                    </ListGroup>
+                </div>
+            </div>
+        );
+    };
+    // --- End Vote History Render Function ---
+
+    // Render member profile details with committee and vote information
     const renderMemberProfile = () => {
         if (!member) return null;
 
         // Determine party class for styling
         const partyClass = member.party === 'Democrat' ? 'democrat-border' : 
                           member.party === 'Republican' ? 'republican-border' : 'independent-border';
-        
-        // Determine badge color based on party
         const badgeVariant = member.party === 'Democrat' ? 'primary' : 
                             member.party === 'Republican' ? 'danger' : 'info';
 
-        // Filter for subcommittees only and then deduplicate
         const subcommitteesOnly = member.committees?.filter(c => c.is_subcommittee) || [];
         const seenSubcommitteeIds = new Set();
         const uniqueSubcommittees = subcommitteesOnly.filter(committee => {
-            if (!committee.committee_id) return false; // Skip if no ID
+            if (!committee.committee_id) return false;
             if (!seenSubcommitteeIds.has(committee.committee_id)) {
                 seenSubcommitteeIds.add(committee.committee_id);
                 return true;
@@ -748,18 +1054,15 @@ function AdvancedView() {
             return false;
         });
 
-        // Helper function to prioritize leadership roles for sorting
         const getRolePriority = (role) => {
             const roleLower = role?.toLowerCase();
             if (roleLower === 'chairman' || roleLower === 'chair') return 0;
             if (roleLower === 'vice chairman' || roleLower === 'vice chair') return 1;
             if (roleLower === 'ranking member') return 2;
             if (roleLower === 'ex officio') return 3;
-            // Add other specific leadership roles here if needed, adjusting numbers
-            return 99; // Default for 'Member' or other/null roles
+            return 99;
         };
 
-        // Sort the unique subcommittees by role priority
         uniqueSubcommittees.sort((a, b) => getRolePriority(a.role) - getRolePriority(b.role));
 
         return (
@@ -782,8 +1085,7 @@ function AdvancedView() {
                     </Row>
                 </Card.Header>
                 <Card.Body>
-                    {/* Row for Image (Left), General Info (Middle), Committees (Right) */}
-                    <Row>
+                    <Row className="mb-4">
                         {/* === Left Column: Image === */}
                         <Col md={4} className="text-center mb-4 mb-md-0">
                             <div className="profile-image-container">
@@ -842,19 +1144,16 @@ function AdvancedView() {
                                         </span>
                                     </ListGroup.Item>
                                 )}
-                                {/* Always show Contact Form item, conditionally show link */}
                                 <ListGroup.Item className="border-0 mb-2 rounded info-item">
                                     <span className="info-label">Contact Form</span>
                                     <span className="info-value">
                                         {member.contact_form ? (
                                             <a href={member.contact_form} target="_blank" rel="noopener noreferrer" className="text-white">Official Contact Form</a>
                                         ) : (
-                                            <span></span> // Render empty span if no contact form URL
+                                            <span></span> 
                                         )}
                                     </span>
                                 </ListGroup.Item>
-                                {/* Remove the previous conditional blocks for contact form */}
-                                {/* {(member.member_type === 'rep' || member.member_type === 'representative') && !member.contact_form && (...) } */}
                                 {member.bioguide_id && (
                                     <ListGroup.Item className="border-0 mb-2 rounded info-item">
                                         <span className="info-label">BioGuide ID</span>
@@ -866,10 +1165,10 @@ function AdvancedView() {
                         
                         {/* === Right Column: Committee Assignments === */}
                         <Col md={4}>
+                            {/* Committee Assignments Section */}
                             {uniqueSubcommittees && uniqueSubcommittees.length > 0 ? (
-                                <>
-                                    <h4 className="mb-3 text-white section-title">Committee Assignments</h4>
-                                    {/* Scrollable container */}
+                                <div className="committee-section mb-4">
+                                    <h5 className="mb-3 text-white section-title">Committee Assignments</h5>
                                     <div className="committee-scroll-container"> 
                                         <ListGroup className="committee-assignments-list">
                                             {uniqueSubcommittees.map((committee, index) => (
@@ -900,14 +1199,24 @@ function AdvancedView() {
                                             ))}
                                         </ListGroup>
                                     </div>
-                                </> 
+                                </div> 
                             ) : (
-                                <div className="text-center text-white-50 mt-4">
+                                <div className="text-center text-white-50 my-4">
                                     No current committee assignments found.
                                 </div>
                             )}
+
+                            {/* --- VOTE HISTORY MOVED --- */}
                         </Col>
                     </Row>
+                    
+                    {/* --- Vote History Row (Full Width) --- */}
+                    <Row className="mt-3"> 
+                        <Col xs={12}>
+                             {renderVoteHistory()} 
+                        </Col>
+                    </Row>
+                    
                 </Card.Body>
             </Card>
         );

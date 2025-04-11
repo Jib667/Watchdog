@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 import yaml # Add yaml import
+import json # Import json
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -581,21 +582,35 @@ def process_legislators(raw_data: List[Dict[str, Any]]) -> Dict[str, List[Dict[s
                 # Convert district to string safely
                 raw_district = current_term.get('district')
                 district_val = 'At-Large'  # Default value
-                
+
                 if raw_district is not None:
                     if isinstance(raw_district, int):
                         district_val = str(raw_district)
                     elif isinstance(raw_district, str):
-                        if raw_district.lower() == 'at-large':
-                            district_val = 'At-Large'
+                        # Check explicitly for 'at-large' case-insensitively
+                        cleaned_district_str = raw_district.strip()
+                        if cleaned_district_str.lower() == 'at-large':
+                             district_val = 'At-Large'
                         else:
-                            # Try to clean up and standardize the district value
-                            district_val = raw_district.strip()
+                            # Try converting string district to int if possible, otherwise keep as string
+                            try:
+                                # Attempt conversion to handle numeric districts stored as strings
+                                district_val = str(int(cleaned_district_str))
+                            except ValueError:
+                                # If it's not purely numeric (or empty after strip), keep original (or default?)
+                                district_val = cleaned_district_str # Keep potentially non-standard district string
+                                if district_val: # Only warn if it's not an empty string
+                                    print(f"Warning: Non-numeric/non-AtLarge district value '{district_val}' for {full_name} ({bioguide_id}). Keeping as string.")
+                                else:
+                                    # If stripping resulted in empty string, revert to At-Large? Or handle as error?
+                                    # Sticking with At-Large for now if input was non-None but became empty.
+                                    district_val = 'At-Large' 
+                                    print(f"Warning: Empty district string after stripping for {full_name} ({bioguide_id}). Defaulting to At-Large.")
 
                 congress_id = _generate_congress_id(full_name, state_code, district=district_val)
                 representative_data = {
                     **base_member_data,
-                    "district": district_val,
+                    "district": district_val, # Ensure this is assigned
                     "congress_id": congress_id,
                     "committees": get_member_committees(bioguide_id) # Add committee data
                 }
@@ -622,7 +637,6 @@ def process_legislators(raw_data: List[Dict[str, Any]]) -> Dict[str, List[Dict[s
             traceback.print_exc() # Print full traceback
             # Log the problematic entry data for inspection
             try:
-                import json
                 print(f"Problematic entry data: {json.dumps(entry, indent=2)}")
             except Exception as json_err:
                 print(f"Could not serialize entry data: {json_err}")
@@ -713,3 +727,167 @@ def find_member_by_id(congress_id: str):
         if sen.get("congress_id") == congress_id:
             return {**sen, "member_type": "senator"}
     return None # Not found
+
+# --- Helper function to get LIS ID from Bioguide ID ---
+# This could be optimized, but is simple for now
+def get_lis_id_from_bioguide(bioguide_id: str) -> Optional[str]:
+    """Finds the LIS ID for a given Bioguide ID from the processed legislator data."""
+    all_members = ALL_REPRESENTATIVES + ALL_SENATORS
+    for member in all_members:
+        if member.get("bioguide_id") == bioguide_id:
+            # Need to access the raw data again or store LIS ID during processing
+            # Let's re-read the specific entry from raw data (less efficient but works)
+            for raw_entry in raw_legislators_data:
+                if raw_entry.get('id', {}).get('bioguide') == bioguide_id:
+                    return raw_entry.get('id', {}).get('lis')
+    return None
+
+# --- Vote History Functionality --- #
+
+def get_member_vote_history(bioguide_id: str) -> List[Dict[str, Any]]:
+    """
+    Finds all recorded votes for a given member by scanning vote data JSON files.
+    Handles both bioguide and LIS IDs found in vote files over time.
+
+    Args:
+        bioguide_id: The bioguide ID of the legislator.
+
+    Returns:
+        A list of dictionaries, each representing a vote the member participated in,
+        sorted by date (most recent first). Returns an empty list if no votes
+        are found or the data directories don't exist.
+    """
+    vote_history = []
+    congress_data_path = STATIC_DATA_DIR / 'congress'
+    
+    # --- Get the LIS ID for comparison ---
+    lis_id = get_lis_id_from_bioguide(bioguide_id)
+    print(f"[VOTE_DEBUG] Searching for votes for bioguide_id: {bioguide_id} (LIS ID: {lis_id}) in {congress_data_path}") # DEBUG
+
+    if not congress_data_path.is_dir():
+        print(f"[VOTE_DEBUG] Error: Congress data directory not found: {congress_data_path}") # DEBUG
+        return []
+
+    # Iterate through each Congress number directory (e.g., '117', '118')
+    print(f"[VOTE_DEBUG] Iterating through congress directories in {congress_data_path}...") # DEBUG
+    found_any_congress_dir = False
+    for congress_dir in congress_data_path.iterdir():
+        if not congress_dir.is_dir() or not congress_dir.name.isdigit():
+            # print(f"[VOTE_DEBUG] Skipping non-directory or non-numeric item: {congress_dir.name}") # DEBUG (Optional: too verbose?)
+            continue # Skip files or non-numeric dirs
+        found_any_congress_dir = True
+        # print(f"[VOTE_DEBUG] Processing congress directory: {congress_dir}") # DEBUG (Less verbose)
+
+        votes_path = congress_dir / 'votes'
+        if not votes_path.is_dir():
+            # print(f"[VOTE_DEBUG] 'votes' directory not found in {congress_dir}") # DEBUG
+            continue # Skip if no 'votes' subdirectory
+
+        # Iterate through all items in 'votes' and look for 'data.json' files deep within.
+        # print(f"[VOTE_DEBUG] Searching for data.json files within {votes_path}...") # DEBUG
+        found_any_json = False
+        for item in votes_path.rglob('data.json'):
+            if not item.is_file():
+                continue
+            found_any_json = True
+            # print(f"[VOTE_DEBUG] Processing file: {item}") # DEBUG (Optional: can be very verbose)
+
+            try:
+                with open(item, 'r', encoding='utf-8') as f:
+                    vote_data = json.load(f)
+
+                member_vote = None
+                vote_position = "N/A"
+
+                # Check all vote categories for the member's ID
+                # The keys can vary (Yea, Nay, Aye, No, Present, Not Voting)
+                vote_categories = vote_data.get('votes', {})
+                found_member_in_vote = False # DEBUG flag
+                for category, voters in vote_categories.items():
+                    if not isinstance(voters, list): continue # Skip if format is unexpected
+
+                    for voter in voters:
+                        # --- MODIFIED CHECK: Compare against bioguide OR lis ID ---
+                        voter_id = voter.get('id') if isinstance(voter, dict) else None
+                        if voter_id and (voter_id == bioguide_id or voter_id == lis_id):
+                        # --- END MODIFIED CHECK ---
+                            member_vote = vote_data # Found the member in this vote
+                            vote_position = category # Store how they voted
+                            found_member_in_vote = True # DEBUG
+                            # print(f"[VOTE_DEBUG] Found match ({voter_id}) for {bioguide_id}/{lis_id} in {item} (Category: {category})") # DEBUG
+                            break # Found in this category, no need to check others
+                    if member_vote:
+                        break # Found in this vote, no need to check other categories
+                
+                # if not found_member_in_vote:
+                    # print(f"[VOTE_DEBUG] Member {bioguide_id}/{lis_id} not found in vote file {item}") # DEBUG (Optional: very verbose)
+
+                if member_vote:
+                    # Extract relevant information
+                    vote_info = {
+                        "vote_id": member_vote.get('vote_id'),
+                        "congress": member_vote.get('congress'),
+                        "chamber": member_vote.get('chamber'),
+                        "session": member_vote.get('session'),
+                        "date": member_vote.get('date'),
+                        "question": member_vote.get('question'),
+                        "description": member_vote.get('description'), # Some votes have this
+                        "result": member_vote.get('result'),
+                        "category": member_vote.get('category'),
+                        "member_vote_position": vote_position,
+                        "bill_number": member_vote.get('bill', {}).get('number'),
+                        "bill_type": member_vote.get('bill', {}).get('type'),
+                        "bill_title": member_vote.get('bill', {}).get('title'), # If available
+                        "source_url": member_vote.get('source_url')
+                    }
+                    vote_history.append(vote_info)
+
+            except json.JSONDecodeError:
+                print(f"[VOTE_DEBUG] Warning: Could not decode JSON from file: {item}") # DEBUG
+            except Exception as e:
+                print(f"[VOTE_DEBUG] Warning: Error processing vote file {item}: {e}") # DEBUG
+        
+        # if not found_any_json:
+            # print(f"[VOTE_DEBUG] No data.json files found using rglob in {votes_path}") # DEBUG
+
+    if not found_any_congress_dir:
+        print(f"[VOTE_DEBUG] No congress directories found in {congress_data_path}") # DEBUG
+
+    # Sort votes by date, most recent first
+    # Handle potential errors if 'date' is missing or not a valid ISO format string
+    def get_sort_key(vote):
+        date_str = vote.get('date')
+        if date_str:
+            try:
+                # Parse ISO format date string (potentially with timezone)
+                dt_obj = datetime.fromisoformat(date_str)
+                # print(f"[SORT_DEBUG] Parsed '{date_str}' -> {dt_obj}") # Very verbose
+                return dt_obj 
+            except ValueError as e:
+                # Fallback for unexpected date formats - treat as oldest
+                print(f"[SORT_DEBUG] ValueError parsing date '{date_str}' for vote_id {vote.get('vote_id')}: {e}") # DEBUG
+                return datetime.min
+            except Exception as e:
+                # Catch any other unexpected errors during parsing
+                print(f"[SORT_DEBUG] Unexpected error parsing date '{date_str}' for vote_id {vote.get('vote_id')}: {e}") # DEBUG
+                return datetime.min
+        else:
+            print(f"[SORT_DEBUG] Missing date for vote_id {vote.get('vote_id')}") # DEBUG
+            return datetime.min # Treat votes without a date as the oldest
+
+    # --- DEBUG: Log first/last few votes BEFORE sorting ---
+    if len(vote_history) > 10:
+        print("[SORT_DEBUG] First 5 vote dates BEFORE sorting:", [v.get('date') for v in vote_history[:5]])
+        print("[SORT_DEBUG] Last 5 vote dates BEFORE sorting:", [v.get('date') for v in vote_history[-5:]])
+    # --- END DEBUG ---
+    
+    vote_history.sort(key=get_sort_key, reverse=True)
+
+    # --- DEBUG: Log first/last few votes AFTER sorting ---
+    if len(vote_history) > 10:
+        print("[SORT_DEBUG] First 5 vote dates AFTER sorting:", [v.get('date') for v in vote_history[:5]])
+        print("[SORT_DEBUG] Last 5 vote dates AFTER sorting:", [v.get('date') for v in vote_history[-5:]])
+    # --- END DEBUG ---
+
+    print(f"[VOTE_DEBUG] Found {len(vote_history)} votes for bioguide_id: {bioguide_id}") # DEBUG
+    return vote_history

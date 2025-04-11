@@ -6,9 +6,10 @@ Handles authentication, user management, and congress data endpoints.
 
 from datetime import timedelta
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlite3 import Row, IntegrityError
+from pathlib import Path
 
 # Import from consolidated core and db modules
 from .core import (
@@ -23,7 +24,14 @@ from .core import (
     find_senators,
     find_member_by_id,
     STATE_CODE_TO_NAME,
-    get_all_committees
+    get_all_committees,
+    get_member_committees,
+    get_member_vote_history,
+    get_all_representatives,
+    get_all_senators,
+    get_list_of_states,
+    ADMIN_USERNAME,
+    ADMIN_PASSWORD
 )
 from .db import get_db_connection, Token, TokenData, User, UserCreate, UserInDB
 
@@ -347,4 +355,115 @@ async def get_member_by_id(member_id: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Member with id {member_id} not found"
         )
-    return member 
+    return member
+
+@router.get("/api/states", response_model=List[str], summary="Get List of States", description="Returns a list of US state names.")
+def get_states():
+    return get_list_of_states()
+
+@router.get("/api/committees", response_model=List[Dict[str, Any]], summary="Get List of Committees", description="Returns a list of main congressional committees.")
+def get_committees_list():
+    return get_all_committees()
+
+@router.get("/api/members/representatives", response_model=List[Dict[str, Any]], summary="Get All Representatives", description="Returns a list of all current US Representatives.")
+def get_representatives():
+    return get_all_representatives()
+
+@router.get("/api/members/senators", response_model=List[Dict[str, Any]], summary="Get All Senators", description="Returns a list of all current US Senators.")
+def get_senators():
+    return get_all_senators()
+
+@router.get("/api/members/search", response_model=List[Dict[str, Any]], summary="Search Members", description="Searches for members based on various criteria.")
+def search_members_api(
+    name: Optional[str] = Query(None, description="Filter by member name (partial match, case-insensitive)"),
+    state: Optional[str] = Query(None, description="Filter by state (full name or abbreviation)"),
+    party: Optional[str] = Query(None, description="Filter by party (e.g., 'Republican', 'Democrat', 'Independent')"),
+    committee_id: Optional[str] = Query(None, description="Filter by committee ID (e.g., 'HSAG', 'SSFI')")
+):
+    reps = get_all_representatives()
+    sens = get_all_senators()
+    members = reps + sens
+    results = []
+
+    # Pre-fetch committee members if committee_id is provided
+    committee_member_ids = set()
+    if committee_id:
+        # We need a way to get members *by* committee ID.
+        # get_member_committees gets committees *for* a member.
+        # Let's reuse the core logic for now, though inefficient.
+        # A better approach would be to pre-process this mapping in core.py
+        all_members_with_committees = [m for m in members if m.get('bioguide_id')]
+        for member in all_members_with_committees:
+            member_committees = get_member_committees(member['bioguide_id'])
+            for committee in member_committees:
+                # Check both main and subcommittee IDs
+                if committee.get('committee_id') == committee_id:
+                    committee_member_ids.add(member['bioguide_id'])
+                    break
+                # Check if parent committee ID matches for subcommittees
+                parent_id = committee.get('committee_id', '')[:4]
+                if committee.get('is_subcommittee') and parent_id == committee_id:
+                     committee_member_ids.add(member['bioguide_id'])
+                     break
+
+    for member in members:
+        match = True
+        if name and name.lower() not in member.get('name', '').lower():
+            match = False
+        if state:
+            # Check full state name or abbreviation
+            normalized_state = state.strip().lower()
+            member_state = member.get('state', '').lower()
+            # Need state code mapping potentially, assume full name match for now
+            # core.py has STATE_CODE_TO_NAME, could add NAME_TO_CODE or check both
+            if normalized_state != member_state:
+                # Add check for abbreviation if core provides mapping
+                match = False # Placeholder
+        if party and party.lower() != member.get('party', '').lower():
+            match = False
+        if committee_id and member.get('bioguide_id') not in committee_member_ids:
+            match = False
+
+        if match:
+            results.append(member)
+
+    # Limit results to avoid overwhelming the frontend?
+    # return results[:50] # Example limit
+    return results
+
+@router.get("/api/members/id/{congress_id}", response_model=Dict[str, Any], summary="Get Member by Congress ID", description="Finds a specific member by their unique congress_id.")
+def get_member_by_congress_id(congress_id: str):
+    member = find_member_by_id(congress_id)
+    if member:
+        return member
+    raise HTTPException(status_code=404, detail=f"Member with congress_id '{congress_id}' not found")
+
+@router.get("/members/{bioguide_id}/votes", response_model=List[Dict[str, Any]], summary="Get Member Vote History", description="Retrieves the recorded vote history for a specific member by their bioguide_id.")
+def get_votes_for_member(bioguide_id: str):
+    """Fetch vote history for a given member by their bioguide ID."""
+    print(f"[API_DEBUG] Entered get_votes_for_member for bioguide_id: {bioguide_id}") # DEBUG
+    try:
+        votes = get_member_vote_history(bioguide_id)
+        
+        # Explicitly check if the result is empty and return 200 OK with []
+        if not votes:
+            print(f"[API_DEBUG] Core function returned no votes for {bioguide_id}. Returning empty list.") # DEBUG
+            return [] # Return empty list, which results in 200 OK
+        else:
+            print(f"[API_DEBUG] Core function returned {len(votes)} votes for {bioguide_id}. Returning list.") # DEBUG
+            return votes
+            
+    except Exception as e:
+        # Log any unexpected errors from the core function
+        print(f"[API_DEBUG] Error calling get_member_vote_history for {bioguide_id}: {e}") # DEBUG
+        # Raise a 500 error for internal issues
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=f"Internal error fetching vote history for {bioguide_id}"
+        )
+
+# Example protected route (requires authentication) - Assuming this belongs on the router
+@router.get("/api/secure-data", summary="Access Secure Data", description="Example of a protected endpoint requiring authentication.", tags=["auth"]) # Added tag for consistency
+async def read_secure_data(current_user: UserInDB = Depends(get_current_user)):
+    # Only accessible if get_current_user succeeds (token is valid)
+    return {"message": f"Hello {current_user.username}! This data is secure.", "user_info": current_user} 

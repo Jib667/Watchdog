@@ -692,4 +692,216 @@ img.rounded-circle {
 
 .committee-scroll-container::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
+}
+
+/* --- Vote History Styles --- */
+
+.vote-history-section {
+  /* Uses existing section-title styling from the JSX */
+  display: flex; /* Added to allow scroll container to grow */
+  flex-direction: column; /* Stack title and scroll */
+  /* Allow this section to take remaining vertical space if needed - MOVED */
+  /* flex-grow: 1; */ 
+  /* min-height: 0; */
+  width: 100%; /* Ensure it spans the full width of its container */
+  margin-top: 1.5rem; /* Space above the vote history section */
+}
+
+/* --- Vote Filter Row Styles --- */
+.vote-history-section .row {
+  align-items: flex-end; /* Align items to the bottom for consistent look */
+}
+
+.vote-history-section .form-label {
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.vote-history-section .form-select,
+.vote-history-section .form-control {
+  /* Match main search input styles */
+  /* height: calc(1.5em + 0.5rem + 2px); */ /* Use standard height */
+  height: 50px; /* Match main search input height */
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Match main border */
+  border-radius: 20px; /* Match main border-radius */
+  font-size: 0.9rem; /* Slightly smaller font for filters? Or match main: 1rem; */
+  padding-left: 1rem; /* Add padding */
+  padding-right: 1rem;
+}
+
+.vote-history-section .form-select:focus,
+.vote-history-section .form-control:focus {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: white;
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1); /* Match focus */
+}
+
+/* Placeholder text color */
+.vote-history-section .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Style option elements */
+.vote-history-section .form-select option {
+  background-color: #1e3a5f; /* Match card background */
+  color: white;
+}
+
+.vote-scroll-container {
+    flex-grow: 1; /* Allow scroll container to fill available space in its flex column */
+    overflow-y: auto;
+    max-height: 450px; /* Or adjust as needed */
+    padding-right: 10px; 
+    margin-right: -10px; 
+    border-top: 1px solid rgba(255, 255, 255, 0.1); /* Separator line */
+    margin-top: 0.5rem; /* Space below title */
+    padding-top: 0.5rem; /* Space above first item */
+}
+
+/* Style scrollbar (optional, for Webkit browsers) */
+.vote-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.vote-scroll-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.vote-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.vote-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.vote-list {
+  padding-left: 0; /* Remove default list padding */
+}
+
+.vote-item {
+  padding: 0.8rem 0.5rem !important; /* Vertical padding, less horizontal */
+  margin-bottom: 0.75rem !important; 
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.15) !important;
+  border-radius: 0 !important; /* Remove radius for list items */
+  background-color: transparent !important; /* Ensure transparent */
+  color: white;
+  line-height: 1.4;
+}
+
+.vote-item:last-child {
+  border-bottom: none !important;
+}
+
+.vote-details {
+  font-size: 0.8em;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.25rem;
+}
+
+.vote-date {
+  font-weight: bold;
+}
+
+.vote-chamber {
+  font-style: italic;
+}
+
+.vote-bill {
+  font-family: 'Courier New', Courier, monospace; 
+  font-weight: bold;
+  margin-left: 5px;
+}
+
+.vote-question {
+  font-weight: 600; /* Bold question */
+  color: white;
+  margin-bottom: 0.25rem;
+  font-size: 0.95em;
+}
+
+.vote-description {
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 0.3rem;
+  font-style: italic;
+}
+
+.vote-member-action {
+  margin-top: 0.25rem;
+  font-size: 0.9em;
+}
+
+.vote-member-action strong {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.vote-position {
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin: 0 5px;
+  color: white; 
+  display: inline-block; 
+  font-size: 0.9em; 
+  text-transform: capitalize; 
+  border: 1px solid transparent;
+}
+
+/* Specific vote position colors */
+.vote-position.vote-yea {
+  background-color: rgba(40, 167, 69, 0.2); /* Green tint */
+  border-color: rgba(40, 167, 69, 0.5);
+  color: #90ee90; /* Light Green */
+}
+
+.vote-position.vote-nay {
+  background-color: rgba(220, 53, 69, 0.2); /* Red tint */
+  border-color: rgba(220, 53, 69, 0.5);
+  color: #f08080; /* Light Coral */
+}
+
+.vote-position.vote-other {
+  background-color: rgba(108, 117, 125, 0.2); /* Gray tint */
+  border-color: rgba(108, 117, 125, 0.5);
+  color: #d3d3d3; /* Light Gray */
+}
+
+.vote-result {
+  font-size: 0.9em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.vote-source {
+  margin-top: 0.3rem;
+  font-size: 0.8em;
+}
+
+.vote-source a {
+  color: #6cb2eb; /* Lighter blue link */
+  text-decoration: none;
+}
+
+.vote-source a:hover {
+  text-decoration: underline;
+  color: #add8e6;
+}
+
+/* Style for vote loading/error messages within the column */
+.vote-history-section .text-center p {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.vote-history-section .text-warning {
+  color: #ffc107 !important; /* Bootstrap warning yellow */
+  background-color: rgba(255, 193, 7, 0.1);
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 193, 7, 0.3);
 } 
