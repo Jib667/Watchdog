@@ -1,19 +1,23 @@
 # Watchdog - Congressional Monitoring Platform
 
-Watchdog is a web application designed to provide citizens with accessible information about the U.S. Congress. It allows users to explore data on current members of the House and Senate, their committee assignments, their previous votes, their campaign promises, basic biographical information, and whether or not they are voting along lines that match their proported platforms. 
+Watchdog is a web application designed to provide citizens with accessible information about the U.S. Congress. It allows users to explore data on current members of the House and Senate, their committee assignments, and basic biographical information.
 
 ## Project Structure
 
 *   `backend/`: Contains the FastAPI backend application.
     *   `app/`: Core application logic, including API routes, data loading, and models.
         *   `main.py`: Main FastAPI application entry point (or adjust if different).
-        *   `core.py`: Handles loading and processing data from YAML files.
+        *   `core.py`: Handles loading and processing data from local static files.
         *   `api.py`: Defines the API endpoints.
-        *   `static/congress_data/`: Stores the downloaded YAML data files.
-    *   `update_congress_members_data.py`: Script to download the latest congressional data YAML files.
+        *   `static/congress_data/`: Stores the downloaded legislator/committee YAML data files and the processed bill/vote data copied from the congress tools.
+            *   `*.yaml`: Legislator, Committee, Membership YAML files.
+            *   `congress/<congress_num>/`: Contains processed Bill and Vote data (JSON/XML).
+    *   `update_congress_members_data.py`: Script to download the latest legislator/committee YAML data files.
+    *   `update_bill_vote_data.py`: Script to manage the `congress_tools` and generate/copy bill/vote data.
     *   `requirements.txt`: Python dependencies for the backend.
     *   `.env` / `.env.example`: Environment variable configuration (if used).
 *   `frontend/`: Contains the React frontend application built with Vite.
+*   `congress_tools/`: **(Local Only - Not Committed)** Directory created locally when `update_bill_vote_data.py` is run. Contains a clone of the `unitedstates/congress` repository and its tools/dependencies. Ignored by Git.
     *   `src/`: Frontend source code (components, pages, styles).
     *   `package.json`: Node.js dependencies and scripts.
 *   `README.md`: This file.
@@ -24,7 +28,8 @@ Watchdog is a web application designed to provide citizens with accessible infor
 The primary source for congressional member and committee data is the open-source `unitedstates/congress-legislators` repository:
 [https://github.com/unitedstates/congress-legislators](https://github.com/unitedstates/congress-legislators)
 
-This project provides structured data maintained by various contributors. Our application downloads specific YAML files from this repository to populate its local data store.
+The source for bill and vote data collection tools is the `unitedstates/congress` repository:
+[https://github.com/unitedstates/congress](https://github.com/unitedstates/congress)
 
 ## Getting Started
 
@@ -34,15 +39,32 @@ This project provides structured data maintained by various contributors. Our ap
 *   Node.js 16 or higher (comes with npm)
 *   `pip` (Python package installer)
 *   `npm` (Node package manager)
+*   **System Dependencies (for Bill/Vote data generation):** `git`, `wget`, and potentially development libraries like `libxml2-dev`, `libxslt1-dev`, `zlib1g-dev` (Linux) or Xcode Command Line Tools (macOS). See setup notes below.
 
 ### Backend Setup
 
 1.  **Navigate to the backend directory:**
     ```bash
+    # Run from project root
     cd backend
     ```
 
-2.  **Create and activate a Python virtual environment (Recommended):**
+2.  **(Required for Bill/Vote Data Script) Install System Dependencies:**
+    The `update_bill_vote_data.py` script relies on tools from the `unitedstates/congress` repository, which requires certain system-level tools.
+    *   **On macOS (using Homebrew):**
+        ```bash
+        # Ensure Xcode Command Line Tools are installed (provides libraries like libxml2, etc.)
+        xcode-select --install
+        # Install required tools if not already present
+        brew install git wget python3
+        ```
+    *   **On Debian/Ubuntu Linux:**
+        ```bash
+        sudo apt-get update && sudo apt-get install git python3 python3-pip python3-venv wget libxml2-dev libxslt1-dev zlib1g-dev -y
+        ```
+    *You only need to do this system setup once.*
+
+3.  **Create and activate a Python virtual environment (Recommended):**
     ```bash
     # Create the virtual environment
     python3 -m venv venv
@@ -52,23 +74,24 @@ This project provides structured data maintained by various contributors. Our ap
     # .\venv\Scripts\activate
     ```
 
-3.  **Install Python dependencies:**
+4.  **Install Python dependencies:**
     ```bash
     pip install -r requirements.txt
     ```
-    *(This includes the `requests` library needed for the update script.)*
+    *(This includes the `requests` library needed for the member update script.)*
 
-4.  **Download Initial Congressional Data:**
-    Run the update script to fetch the necessary YAML files:
+5.  **Download/Generate Initial Congressional Data:**
+    Run the two update scripts. **Note:** `update_bill_vote_data.py` can take a very long time on its first run as it processes historical data.
     ```bash
-    python update_congress_members_data.py
+    python update_congress_members_data.py # Fetches legislator/committee YAMLs
+    python update_bill_vote_data.py      # Clones tools, generates & copies bill/vote data
     ```
-    *(This will populate the `backend/app/static/congress_data/` directory.)*
+    *(These scripts populate `backend/app/static/congress_data/` and create the local `congress_tools/` directory respectively.)*
 
-5.  **Configure Environment (If applicable):**
+6.  **Configure Environment (If applicable):**
     If your project uses a `.env` file for configuration (e.g., for secrets or API keys if added later), copy `.env.example` to `.env` and fill in the required values.
 
-6.  **Start the backend server:**
+7.  **Start the backend server:**
     ```bash
     # Make sure your virtual environment is active
     # Adjust 'app.main:app' if your FastAPI app instance is defined elsewhere
@@ -99,14 +122,17 @@ This project provides structured data maintained by various contributors. Our ap
 
 ## Updating Congressional Data
 
-To update the local YAML files with the latest data from the `congress-legislators` repository:
+To update the local data files:
 
 1.  Navigate to the `backend` directory.
 2.  Ensure your Python virtual environment is active (`source venv/bin/activate` or equivalent).
-3.  Run the update script:
+3.  Run the desired update script(s):
     ```bash
-    python update_congress_members_data.py
+    python update_congress_members_data.py # Update legislator/committee YAMLs (quick)
+    python update_bill_vote_data.py      # Update bills/votes for recent Congress (can be slow)
     ```
+    *Note: The `update_bill_vote_data.py` script manages the `congress_tools/` directory locally and copies the generated data to `backend/app/static/congress_data/congress/`. Remember to commit changes to the copied data in `backend/app/static/congress_data/congress/` if you want to include updated bill/vote data in the repository.*
+
 4.  Restart the backend server (Uvicorn with `--reload` should restart automatically, but a manual restart ensures the new data is loaded if `--reload` isn't used or fails).
 
 ## API Documentation
@@ -121,6 +147,7 @@ Once the backend server is running, interactive API documentation (provided by F
 *   **Backend**: FastAPI (Python), Uvicorn, PyYAML
 *   **Frontend**: React, Vite, React Router, React Bootstrap
 *   **Data Source**: YAML files from `unitedstates/congress-legislators`
+*   **Data Generation Tools (Local)**: `unitedstates/congress` tools (run locally via script)
 
 ## License
 
