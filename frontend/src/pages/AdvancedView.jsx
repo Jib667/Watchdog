@@ -100,59 +100,24 @@ function AdvancedView() {
     const [currentVariationIndex, setCurrentVariationIndex] = useState(0);
     const [imageError, setImageError] = useState(false);
 
-    // Function to generate all possible image variations for a member name
-    const generateImageUrlVariations = useCallback((name) => {
-        if (!name) return [];
-        
-        const variations = [];
-        
-        // Clean the name by removing suffixes
-        let cleanedName = name.replace(/,?\s+(jr\.?|sr\.?|i{1,3}|iv|v)$/i, '').trim();
-        console.log("Name after removing suffixes:", cleanedName);
-        
-        // Handle nicknames in different quote formats: "Rick", 'Rick', "Rick", etc.
-        // \u201C and \u201D are unicode for curly quotes
-        cleanedName = cleanedName.replace(/\s+[\"\'\u201C\u201D]([^\"\']+)[\"\'\u201C\u201D]\s+/g, ' ');
-        console.log("Name after removing quoted nicknames:", cleanedName);
-        
-        // Remove middle names and initials - keep only first and last name
-        if (cleanedName.split(' ').length > 2) {
-            const parts = cleanedName.split(' ');
-            cleanedName = `${parts[0]} ${parts[parts.length - 1]}`;
-        }
-        console.log("Name simplified to first and last:", cleanedName);
-        
-        // Normalize accented characters (á, é, í, ó, ú, ñ, etc.)
-        const normalizedName = cleanedName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        console.log("Normalized name:", normalizedName);
-        
-        // First priority: firstname_lastname
-        const firstName = normalizedName.split(' ')[0];
-        const lastName = normalizedName.split(' ').pop();
-        
-        // Add variations
-        // 1. firstname_lastname (highest priority)
-        variations.push(`${API_URL}/static/images/${firstName.toLowerCase()}_${lastName.toLowerCase()}.jpg`);
-        
-        // 2. lastname_firstname
-        variations.push(`${API_URL}/static/images/${lastName.toLowerCase()}_${firstName.toLowerCase()}.jpg`);
-        
-        // 3. Full normalized name (all parts joined with underscores)
-        if (normalizedName.split(' ').length > 2) {
-            variations.push(`${API_URL}/static/images/${normalizedName.toLowerCase().replace(/\s+/g, '_').replace(/\./g, '').replace(/'/g, '')}.jpg`);
+    // Function to generate image variations using the unitedstates/images repo
+    const generateImageUrlVariations = useCallback((bioguideId) => {
+        if (!bioguideId) {
+            console.warn("generateImageUrlVariations called without bioguideId, returning only placeholder.");
+            return [`${API_URL}/static/images/placeholder.png`]; // Only placeholder if no ID
         }
         
-        // Always try with just the first letter of first name + last name
-        variations.push(`${API_URL}/static/images/${firstName.charAt(0).toLowerCase()}_${lastName.toLowerCase()}.jpg`);
+        const baseUrl = 'https://unitedstates.github.io/images/congress';
+        const sizes = ['450x550', '225x275', 'original']; // Try larger sizes first
         
-        // Last resort: placeholder
-        variations.push(`${API_URL}/static/images/placeholder.jpg`);
+        const variations = sizes.map(size => `${baseUrl}/${size}/${bioguideId}.jpg`);
         
-        // Log the variations for debugging
-        console.log("Image URL variations:", variations);
+        // Add local placeholder as the ultimate fallback
+        variations.push(`${API_URL}/static/images/placeholder.png`); // Use .png
         
+        console.log(`Image URL variations for ${bioguideId}:`, variations);
         return variations;
-    }, []);
+    }, []); // API_URL could be a dependency if it might change, but likely stable
 
     // Function to preload an image
     const preloadImage = useCallback((src) => {
@@ -221,7 +186,7 @@ function AdvancedView() {
         if (!member?.name) return;
         
         // Generate all possible image URL variations
-        const variations = generateImageUrlVariations(member.name);
+        const variations = generateImageUrlVariations(member.bioguide_id);
         setImageUrlVariations(variations);
         setCurrentVariationIndex(0); // Reset to first variation
         setCurrentImageUrl(variations[0]); // Start with first variation
@@ -247,7 +212,7 @@ function AdvancedView() {
                 // Skip if already loaded
                 if (imagesLoaded[member.congress_id]) continue;
                 
-                const variations = generateImageUrlVariations(member.name);
+                const variations = generateImageUrlVariations(member.bioguide_id);
                 try {
                     const { src } = await tryLoadImages(variations);
                     member.loadedImageSrc = src;
@@ -778,7 +743,7 @@ function AdvancedView() {
             
             // Ensure image properties are initialized (might be redundant if preloaded elsewhere)
             if (!res.currentImageUrl) {
-                res.imageUrlVariations = generateImageUrlVariations(res.name);
+                res.imageUrlVariations = generateImageUrlVariations(res.bioguide_id);
                 res.currentImageUrl = res.imageUrlVariations[0];
                 res.imageUrlIndex = 0;
             }

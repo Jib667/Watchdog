@@ -34,6 +34,10 @@ Bill and vote data is generated using tools from the `unitedstates/congress` rep
 [https://github.com/unitedstates/congress](https://github.com/unitedstates/congress)
 This generated data (for Congresses 94-119) is included directly in this repository under `backend/app/static/congress_data/congress/` to allow the application to run without requiring the lengthy initial data generation process.
 
+Member photos are sourced from the public domain `unitedstates/images` repository:
+[https://github.com/unitedstates/images](https://github.com/unitedstates/images)
+These images are served directly via GitHub Pages.
+
 ## Getting Started
 
 ### Prerequisites

@@ -6,58 +6,24 @@ import './MemberCard.css';
 // Define API_BASE_URL - adjust this based on your actual API URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// Function to generate different possible image filename variations
-const generateImageUrlVariations = (name, baseUrl) => {
-  if (!name) return [];
-  
-  const variations = [];
-  
-  // Clean the name by removing suffixes
-  let cleanedName = name.replace(/,?\s+(jr\.?|sr\.?|i{1,3}|iv|v)$/i, '').trim();
-  console.log("Name after removing suffixes:", cleanedName);
-  
-  // Handle nicknames in different quote formats: "Rick", 'Rick', "Rick", etc.
-  // \u201C and \u201D are unicode for curly quotes
-  cleanedName = cleanedName.replace(/\s+[\"\'\u201C\u201D]([^\"\']+)[\"\'\u201C\u201D]\s+/g, ' ');
-  console.log("Name after removing quoted nicknames:", cleanedName);
-  
-  // Remove middle names and initials - keep only first and last name
-  if (cleanedName.split(' ').length > 2) {
-    const parts = cleanedName.split(' ');
-    cleanedName = `${parts[0]} ${parts[parts.length - 1]}`;
-  }
-  console.log("Name simplified to first and last:", cleanedName);
-  
-  // Normalize accented characters (á, é, í, ó, ú, ñ, etc.)
-  const normalizedName = cleanedName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  console.log("Normalized name:", normalizedName);
-  
-  // First priority: firstname_lastname
-  const firstName = normalizedName.split(' ')[0];
-  const lastName = normalizedName.split(' ').pop();
-  
-  // Add variations
-  // 1. firstname_lastname (highest priority)
-  variations.push(`${baseUrl}/static/images/${firstName.toLowerCase()}_${lastName.toLowerCase()}.jpg`);
-  
-  // 2. lastname_firstname
-  variations.push(`${baseUrl}/static/images/${lastName.toLowerCase()}_${firstName.toLowerCase()}.jpg`);
-  
-  // 3. Full normalized name (all parts joined with underscores)
-  if (normalizedName.split(' ').length > 2) {
-    variations.push(`${baseUrl}/static/images/${normalizedName.toLowerCase().replace(/\s+/g, '_').replace(/\./g, '').replace(/'/g, '')}.jpg`);
-  }
-  
-  // Always try with just the first letter of first name + last name
-  variations.push(`${baseUrl}/static/images/${firstName.charAt(0).toLowerCase()}_${lastName.toLowerCase()}.jpg`);
-  
-  // Last resort: placeholder
-  variations.push(`${baseUrl}/static/images/placeholder.jpg`);
-  
-  // Log the variations for debugging
-  console.log("Image URL variations:", variations);
-  
-  return variations;
+// Function to generate image variations using the unitedstates/images repo
+const generateImageUrlVariations = (bioguideId, baseUrl) => {
+    if (!bioguideId) {
+        console.warn("generateImageUrlVariations (MemberCard) called without bioguideId, returning only placeholder.");
+        return [`${baseUrl}/static/images/placeholder.jpg`]; // Only placeholder if no ID
+    }
+    
+    const githubBaseUrl = 'https://unitedstates.github.io/images/congress';
+    // Prioritize smaller image for cards, then larger, then original
+    const sizes = ['225x275', '450x550', 'original']; 
+    
+    const variations = sizes.map(size => `${githubBaseUrl}/${size}/${bioguideId}.jpg`);
+    
+    // Add local placeholder as the ultimate fallback (using baseUrl provided)
+    variations.push(`${baseUrl}/static/images/placeholder.png`); // Use .png
+    
+    console.log(`[MemberCard] Image URL variations for ${bioguideId}:`, variations);
+    return variations;
 };
 
 // Updated MemberCard to display more data from the member prop
@@ -90,16 +56,22 @@ const MemberCard = ({ member, onClose }) => {
   const stateRank = member.state_rank; // For senators
   const senateClass = member.senate_class; // For senators
   
-  // Handle image URL to ensure it's properly formed
   useEffect(() => {
-    const baseUrl = API_BASE_URL;
+    const baseUrl = API_BASE_URL; // Use the API base URL for the placeholder fallback
     
-    // Generate all possible image URL variations
-    const variations = generateImageUrlVariations(memberName, baseUrl);
+    // Generate variations using bioguideId
+    const variations = generateImageUrlVariations(bioguideId, baseUrl);
     setImageUrlVariations(variations);
     setImageUrlIndex(0); // Reset to first variation
-    setCurrentImageUrl(variations[0]); // Start with first variation
-  }, [member, memberName]);
+    
+    // Initialize with the first variation (e.g., 225x275 from github)
+    if (variations.length > 0) {
+        setCurrentImageUrl(variations[0]); 
+    } else {
+        setCurrentImageUrl(null); // Should not happen if placeholder logic is correct
+    }
+
+  }, [member, bioguideId]); // Depend on member and specifically bioguideId
   
   // Function to try the next image URL variation
   const tryNextImageVariation = () => {
