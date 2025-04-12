@@ -1106,10 +1106,280 @@ function AdvancedView() {
             return <span className={className}>{position}</span>;
         };
 
+        // Helper to generate Congress.gov link based on vote data
+        const generateCongressDotGovLink = (vote) => {
+            if (!vote) return null;
+            
+            // Extract congress number and year from vote_id if available
+            let congress = vote.congress;
+            let session = vote.session || '1';
+            let year = null;
+            
+            if (vote.vote_id) {
+                // Format is often like "h525-109.2005" or similar
+                const parts = vote.vote_id.split('-');
+                if (parts.length > 1) {
+                    const secondPart = parts[1];
+                    const congressYearParts = secondPart.split('.');
+                    if (congressYearParts.length > 1) {
+                        congress = congressYearParts[0];
+                        year = congressYearParts[1];
+                        // Try to determine session from year
+                        if (year) {
+                            const yearNum = parseInt(year);
+                            const congressStartYear = parseInt(congress) * 2 + 1787;
+                            if (yearNum === congressStartYear || yearNum === congressStartYear + 1) {
+                                session = (yearNum === congressStartYear) ? '1' : '2';
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // If we still don't have congress, try to extract from date
+            if (!congress && vote.date) {
+                try {
+                    year = new Date(vote.date).getFullYear();
+                    // Calculate Congress number based on year
+                    // Congress starts in odd-numbered years
+                    // 1st Congress: 1789-1791, 113th: 2013-2015
+                    const estimatedCongress = Math.floor((year - 1789) / 2) + 1;
+                    congress = estimatedCongress.toString();
+                    
+                    // Calculate session number (1 or 2) based on year
+                    const congressStartYear = estimatedCongress * 2 + 1787;
+                    session = (year === congressStartYear) ? '1' : '2';
+                } catch (e) {
+                    console.error("Error parsing date for Congress calculation:", e);
+                }
+            }
+            
+            // --- PRIORITIZE LINK TYPES BASED ON VOTE DATA ---
+            
+            // BILL VOTE: HIGHEST PRIORITY FOR "ON PASSAGE" VOTES
+            // For votes on bill passages, check first if we have direct bill data
+            if (vote.type?.toLowerCase().includes('passage') || 
+                vote.question?.toLowerCase().includes('passage') ||
+                vote.category === 'passage') {
+                
+                // If bill data exists directly in vote object
+                if (vote.bill && vote.bill.number && vote.bill.type) {
+                    const billType = vote.bill.type || '';
+                    const billNumber = vote.bill.number || '';
+                    const billCongress = vote.bill.congress || congress;
+                    
+                    if (billCongress && billType && billNumber) {
+                        console.log('[LinkGen] Using direct Bill Link for passage vote');
+                        return `https://www.congress.gov/bill/${billCongress}th-congress/${getBillTypeForUrl(billType)}/${billNumber}`;
+                    }
+                }
+                
+                // Try to extract bill info from question if available
+                if (vote.question) {
+                    const billInfo = extractBillInfoFromQuestion(vote.question);
+                    if (billInfo && billInfo.type && billInfo.number && congress) {
+                        console.log('[LinkGen] Using extracted Bill Link from question for passage vote');
+                        return `https://www.congress.gov/bill/${congress}th-congress/${getBillTypeForUrl(billInfo.type)}/${billInfo.number}`;
+                    }
+                }
+            }
+            
+            // DIRECT BILL LINK FOR ANY VOTE WITH BILL INFO
+            if (vote.bill && vote.bill.number && vote.bill.type) {
+                const billType = vote.bill.type || '';
+                const billNumber = vote.bill.number || '';
+                const billCongress = vote.bill.congress || congress;
+                
+                if (billCongress && billType && billNumber) {
+                    console.log('[LinkGen] Using direct Bill Link from vote.bill data');
+                    return `https://www.congress.gov/bill/${billCongress}th-congress/${getBillTypeForUrl(billType)}/${billNumber}`;
+                }
+            }
+            
+            // NOMINATION HANDLING
+            if (vote.category === 'nomination' || vote.type?.toLowerCase().includes('nomination')) {
+                // Try to extract nomination number from JSON data
+                if (vote.nomination && vote.nomination.number && congress) {
+                    console.log('[LinkGen] Using Nomination Link');
+                    return `https://www.congress.gov/nomination/${congress}th-congress/${vote.nomination.number}`;
+                }
+                
+                // Try to extract nomination number from question
+                if (vote.question) {
+                    // Look for PN followed by numbers (PN1234)
+                    const nomMatch = vote.question.match(/PN\s*(\d+)/i);
+                    if (nomMatch && nomMatch[1] && congress) {
+                        console.log('[LinkGen] Using Nomination Link from PN number in question');
+                        return `https://www.congress.gov/nomination/${congress}th-congress/${nomMatch[1]}`;
+                    }
+                }
+            }
+            
+            // TREATY HANDLING
+            if (vote.category === 'treaty' || vote.type?.toLowerCase().includes('treaty') || vote.question?.toLowerCase().includes('treaty doc')) {
+                console.log('[LinkGen] Processing treaty vote:', vote.question);
+                
+                // Extract treaty doc number from question with improved regex
+                if (vote.question) {
+                    // Pattern for "Treaty Doc. 117-1" format
+                    const treatyMatch = vote.question.match(/Treaty\s+Doc(?:\.|ocument)?\s*(?:No\.?)?\s*(\d+)[-.](\d+)/i);
+                    if (treatyMatch && treatyMatch[1] && treatyMatch[2]) {
+                        const congressNum = treatyMatch[1];
+                        const docNum = treatyMatch[2];
+                        console.log(`[LinkGen] Extracted treaty document: congress=${congressNum}, doc=${docNum}`);
+                        
+                        // Fixed URL format for treaty documents
+                        return `https://www.congress.gov/treaty-document/${congressNum}-${docNum}`;
+                    }
+                    
+                    // Alternative pattern for just "Treaty Doc. 5" (single number)
+                    const simpleTreatyMatch = vote.question.match(/Treaty\s+Doc(?:\.|ocument)?\s*(?:No\.?)?\s*(\d+)(?!\d*[-.])/i);
+                    if (simpleTreatyMatch && simpleTreatyMatch[1] && congress) {
+                        console.log(`[LinkGen] Extracted simple treaty document: ${simpleTreatyMatch[1]}`);
+                        return `https://www.congress.gov/treaty-document/${congress}-${simpleTreatyMatch[1]}`;
+                    }
+                }
+                
+                // Direct link if we have the treaty number in the JSON
+                if (vote.treaty && vote.treaty.number && congress) {
+                    console.log('[LinkGen] Using Treaty Link from JSON data');
+                    
+                    // Format treaty number to match Congress.gov expectations
+                    let treatyNumberStr = vote.treaty.number.toString();
+                    
+                    // If it's a simple number and doesn't already contain congress number, add it
+                    if (!treatyNumberStr.includes('-') && !treatyNumberStr.includes('.')) {
+                        treatyNumberStr = `${congress}-${treatyNumberStr}`;
+                    }
+                    
+                    return `https://www.congress.gov/treaty-document/${treatyNumberStr}`;
+                }
+                
+                // Fallback to roll call vote if we couldn't get a treaty-specific link
+                if (congress && vote.chamber && vote.number) {
+                    console.log('[LinkGen] Falling back to roll call for treaty vote');
+                    const chamber = vote.chamber === 'h' ? 'house' : 'senate';
+                    return `https://www.congress.gov/roll-call-vote/${congress}th-congress/${session}/${chamber}/vote-${vote.number}`;
+                }
+            }
+            
+            // AMENDMENT HANDLING
+            if (vote.category === 'amendment' || vote.type?.toLowerCase().includes('amendment')) {
+                if (vote.amendment && vote.amendment.number) {
+                    const amendNumber = vote.amendment.number;
+                    const chamber = vote.chamber === 'h' ? 'house' : 'senate';
+                    console.log('[LinkGen] Using Amendment Link');
+                    return `https://www.congress.gov/amendment/${congress}th-congress/${chamber}-amendment/${amendNumber}`;
+                }
+                
+                // Try to extract amendment number from question
+                if (vote.question) {
+                    const amendMatch = vote.question.match(/(?:H|S)\.?\s*Amdt\.?\s*(\d+)/i);
+                    if (amendMatch && amendMatch[1] && congress) {
+                        const chamber = vote.question.toLowerCase().startsWith('h') ? 'house' : 'senate';
+                        console.log('[LinkGen] Using Amendment Link from question');
+                        return `https://www.congress.gov/amendment/${congress}th-congress/${chamber}-amendment/${amendMatch[1]}`;
+                    }
+                }
+            }
+            
+            // Try to extract bill info from question if we don't have bill data directly
+            if (vote.question) {
+                const billInfo = extractBillInfoFromQuestion(vote.question);
+                if (billInfo && billInfo.type && billInfo.number && congress) {
+                    console.log('[LinkGen] Using Bill Link extracted from question text');
+                    return `https://www.congress.gov/bill/${congress}th-congress/${getBillTypeForUrl(billInfo.type)}/${billInfo.number}`;
+                }
+            }
+            
+            // DIRECT ROLL CALL VOTE LINK
+            if (congress && vote.chamber && vote.number) {
+                const chamber = vote.chamber === 'h' ? 'house' : 'senate';
+                console.log('[LinkGen] Using Roll Call Vote Link');
+                return `https://www.congress.gov/roll-call-vote/${congress}th-congress/${session}/${chamber}/vote-${vote.number}`;
+            }
+            
+            // Last resort - if all else fails, link to Congress.gov search
+            if (vote.question && congress) {
+                const questionText = encodeURIComponent(vote.question);
+                console.log('[LinkGen] Fallback to search');
+                return `https://www.congress.gov/search?q={"source":"all","congress":"${congress}","search":"${questionText}"}`;
+            }
+            
+            // Absolute fallback
+            return "https://www.congress.gov/";
+        };
+        
+        // Helper function to extract bill info from question text
+        const extractBillInfoFromQuestion = (questionText) => {
+            if (!questionText) return null;
+            
+            // Match common bill formats WITH or WITHOUT dots
+            // Updated regex to match both "H.R. 123" and "H R 123" formats
+            const billMatch = questionText.match(/H\.?\s*R\.?\s*(\d+)|S\.?\s*(\d+)|H\.?\s*J\.?\s*Res\.?\s*(\d+)|S\.?\s*J\.?\s*Res\.?\s*(\d+)|H\.?\s*Con\.?\s*Res\.?\s*(\d+)|S\.?\s*Con\.?\s*Res\.?\s*(\d+)|H\.?\s*Res\.?\s*(\d+)|S\.?\s*Res\.?\s*(\d+)/i);
+            
+            if (billMatch) {
+                let billType = '';
+                let billNumber = '';
+                
+                if (billMatch[1]) { 
+                    billType = 'hr'; 
+                    billNumber = billMatch[1]; 
+                } else if (billMatch[2]) { 
+                    billType = 's'; 
+                    billNumber = billMatch[2]; 
+                } else if (billMatch[3]) { 
+                    billType = 'hjres'; 
+                    billNumber = billMatch[3]; 
+                } else if (billMatch[4]) { 
+                    billType = 'sjres'; 
+                    billNumber = billMatch[4]; 
+                } else if (billMatch[5]) { 
+                    billType = 'hconres'; 
+                    billNumber = billMatch[5]; 
+                } else if (billMatch[6]) { 
+                    billType = 'sconres';
+                    billNumber = billMatch[6]; 
+                } else if (billMatch[7]) { 
+                    billType = 'hres'; 
+                    billNumber = billMatch[7]; 
+                } else if (billMatch[8]) { 
+                    billType = 'sres'; 
+                    billNumber = billMatch[8]; 
+                }
+                
+                if (billType && billNumber) {
+                    console.log(`[Bill Extraction] Found bill: ${billType}-${billNumber} in text: "${questionText}"`);
+                    return { type: billType, number: billNumber };
+                }
+            }
+            
+            // Log failures to help with debugging
+            console.log(`[Bill Extraction] Failed to extract bill info from: "${questionText}"`);
+            return null;
+        }
+        
+        // Helper to convert bill type to URL format
+        const getBillTypeForUrl = (type) => {
+            switch (type.toLowerCase()) {
+                case 'hr': return 'house-bill';
+                case 'hres': return 'house-resolution';
+                case 'hjres': return 'house-joint-resolution';
+                case 'hconres': return 'house-concurrent-resolution';
+                case 's': return 'senate-bill';
+                case 'sres': return 'senate-resolution';
+                case 'sjres': return 'senate-joint-resolution';
+                case 'sconres': return 'senate-concurrent-resolution';
+                default: return type;
+            }
+        };
+
         // Define the Row component for react-window
         const VoteRow = ({ index, style }) => {
             const vote = filteredVotes[index];
             if (!vote) return null; // Handle potential edge case
+
+            const congressDotGovLink = generateCongressDotGovLink(vote);
 
             return (
                 <ListGroup.Item 
@@ -1136,13 +1406,18 @@ function AdvancedView() {
                         <strong>Vote:</strong> {formatVotePosition(vote.member_vote_position)}
                         <span className="vote-result ms-2 text-white-50">({vote.result || 'Result N/A'})</span>
                     </div>
-                    {vote.source_url && (
-                        <div className="vote-source mt-1">
-                            <a href={vote.source_url} target="_blank" rel="noopener noreferrer" className="small text-info">
+                    <div className="vote-links mt-1 d-flex flex-column">
+                        {vote.source_url && (
+                            <a href={vote.source_url} target="_blank" rel="noopener noreferrer" className="small text-info mb-1">
                                 View Source
                             </a>
-                        </div>
-                    )}
+                        )}
+                        {congressDotGovLink && (
+                            <a href={congressDotGovLink} target="_blank" rel="noopener noreferrer" className="small text-info">
+                                Detailed Information
+                            </a>
+                        )}
+                    </div>
                 </ListGroup.Item>
             );
         };
