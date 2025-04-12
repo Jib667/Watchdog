@@ -1,10 +1,31 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation, useParams, Link, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Spinner, Alert, Badge, ListGroup, Image } from 'react-bootstrap';
+import { FixedSizeList } from 'react-window'; // Import react-window
 import './AdvancedView.css'; // Updated CSS import
 import { useSelector } from 'react-redux';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+// Custom Hook for Debouncing
+function useDebounce(value, delay) {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+
+    useEffect(() => {
+        // Set timeout to update debounced value after delay
+        const handler = setTimeout(() => {
+            console.log(`[useDebounce] Updating debounced value for: ${value} (after ${delay}ms)`);
+            setDebouncedValue(value);
+        }, delay);
+
+        // Cleanup function to clear timeout if value changes before delay
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]); // Re-run effect if value or delay changes
+
+    return debouncedValue;
+}
 
 // Simple Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -740,90 +761,107 @@ function AdvancedView() {
         </Form>
     );
 
-    // Render search results with improved styling
-    const renderSearchResults = () => (
-        <div className="search-results">
-            <h3 className="mt-4 mb-3">Search Results...</h3>
-            <ListGroup>
-                {searchResults.map(res => {
-                    // Determine party class for styling
-                    const partyClass = res.party === 'Democrat' ? 'democrat-border' : 
-                                      res.party === 'Republican' ? 'republican-border' : 'independent-border';
-                    
-                    // Process image URL for this result if not already done
-                    if (!res.currentImageUrl) {
-                        res.imageUrlVariations = generateImageUrlVariations(res.name);
-                        res.currentImageUrl = res.imageUrlVariations[0];
-                        res.imageUrlIndex = 0;
-                    }
-                    
-                    // Function to try next image variation
-                    const tryNextImageVariation = (result) => {
-                        if (result.imageUrlIndex < result.imageUrlVariations.length - 1) {
-                            result.imageUrlIndex++;
-                            result.currentImageUrl = result.imageUrlVariations[result.imageUrlIndex];
-                            return result.currentImageUrl;
-                        }
-                        return result.currentImageUrl;
-                    };
-                    
-                    return (
-                        <ListGroup.Item 
-                            key={res.congress_id || res.bioguide_id} 
-                            action 
-                            as={Link} 
-                            to={`/advanced-profile/${res.congress_id}`}
-                            className={`mb-2 ${partyClass}`}
-                            onClick={() => {
-                                // Programmatically scroll to top when link is clicked
-                                window.scrollTo(0, 0);
-                            }}
-                        >
-                            <Row className="align-items-center">
-                                <Col xs="auto" className="pe-0">
-                                    <Image
-                                        src={res.currentImageUrl} 
-                                        onError={(e) => {
-                                            // console.log("Image failed to load:", res.currentImageUrl);
-                                            e.target.onerror = null; // Prevent infinite loop
-                                            const nextUrl = tryNextImageVariation(res);
-                                            if (nextUrl) {
-                                                e.target.src = nextUrl;
-                                            }
-                                        }}
-                                        roundedCircle
-                                        style={{ 
-                                            width: '50px', 
-                                            height: '50px', 
-                                            objectFit: 'cover',
-                                            backgroundColor: '#f1f1f1'
-                                        }}
-                                        alt={`${res.name}`}
-                                    />
-                                </Col>
-                                <Col>
-                                    <div className="d-flex flex-column">
-                                        <strong>{res.name}</strong>
-                                        <span>
-                                            {res.party} - {res.state}
-                                            {/* Explicit check for Rep type */}
-                                            {(res.member_type === 'rep' || res.member_type === 'representative') && res.district && (
-                                                ` - District ${res.district}`
-                                            )}
-                                            {/* Explicit check for Sen type and state_rank */}
-                                            {(res.member_type === 'sen' || res.member_type === 'senator') && res.state_rank && (
-                                                ` - ${res.state_rank.charAt(0).toUpperCase() + res.state_rank.slice(1)} Senator`
-                                            )}
-                                        </span>
-                                    </div>
-                                </Col>
-                            </Row>
-                        </ListGroup.Item>
-                    );
-                })}
-            </ListGroup>
-        </div>
-    );
+    // Render search results with improved styling and virtualization
+    const renderSearchResults = () => {
+        
+        // Define the Row component for react-window search results
+        const MemberRow = ({ index, style }) => {
+            const res = searchResults[index];
+            if (!res) return null;
+
+            // Determine party class for styling
+            const partyClass = res.party === 'Democrat' ? 'democrat-border' : 
+                              res.party === 'Republican' ? 'republican-border' : 'independent-border';
+            
+            // Ensure image properties are initialized (might be redundant if preloaded elsewhere)
+            if (!res.currentImageUrl) {
+                res.imageUrlVariations = generateImageUrlVariations(res.name);
+                res.currentImageUrl = res.imageUrlVariations[0];
+                res.imageUrlIndex = 0;
+            }
+            
+            // Function to try next image variation (scoped within the row)
+            const tryNextImageVariation = (result) => {
+                if (result.imageUrlIndex < result.imageUrlVariations.length - 1) {
+                    result.imageUrlIndex++;
+                    result.currentImageUrl = result.imageUrlVariations[result.imageUrlIndex];
+                    return result.currentImageUrl;
+                }
+                return result.currentImageUrl;
+            };
+
+            return (
+                <ListGroup.Item 
+                    key={res.congress_id || res.bioguide_id} 
+                    action 
+                    as={Link} 
+                    to={`/advanced-profile/${res.congress_id}`} // Use congress_id for linking
+                    style={style} // Apply style provided by react-window
+                    className={`mb-2 ${partyClass} member-search-result-item`} // Added specific class
+                    onClick={() => {
+                        // Programmatically scroll to top when link is clicked
+                        window.scrollTo(0, 0);
+                    }}
+                >
+                    <Row className="align-items-center">
+                        <Col xs="auto" className="pe-0">
+                            <Image
+                                src={res.currentImageUrl} 
+                                onError={(e) => {
+                                    e.target.onerror = null; // Prevent infinite loop
+                                    const nextUrl = tryNextImageVariation(res);
+                                    if (nextUrl) {
+                                        e.target.src = nextUrl;
+                                    }
+                                }}
+                                roundedCircle
+                                style={{ 
+                                    width: '50px', 
+                                    height: '50px', 
+                                    objectFit: 'cover',
+                                    backgroundColor: '#f1f1f1'
+                                }}
+                                alt={`${res.name}`}
+                            />
+                        </Col>
+                        <Col>
+                            <div className="d-flex flex-column">
+                                <strong>{res.name}</strong>
+                                <span>
+                                    {res.party} - {res.state}
+                                    {(res.member_type === 'rep' || res.member_type === 'representative') && res.district && (
+                                        ` - District ${res.district}`
+                                    )}
+                                    {(res.member_type === 'sen' || res.member_type === 'senator') && res.state_rank && (
+                                        ` - ${res.state_rank.charAt(0).toUpperCase() + res.state_rank.slice(1)} Senator`
+                                    )}
+                                </span>
+                            </div>
+                        </Col>
+                    </Row>
+                </ListGroup.Item>
+            );
+        };
+
+        const MEMBER_ITEM_HEIGHT = 75; // Estimate height for member result items
+        // Calculate a reasonable height for the list container, e.g., based on viewport or a fixed max
+        const listHeight = Math.min(searchResults.length * MEMBER_ITEM_HEIGHT, window.innerHeight * 0.6);
+
+        return (
+            <div className="search-results">
+                <h3 className="mt-4 mb-3">Search Results ({searchResults.length})</h3>
+                <FixedSizeList
+                    height={listHeight} // Dynamic height or a fixed value
+                    itemCount={searchResults.length}
+                    itemSize={MEMBER_ITEM_HEIGHT}
+                    width={'100%'}
+                    className="member-search-list" // Add class for styling
+                >
+                    {MemberRow}
+                </FixedSizeList>
+            </div>
+        );
+    };
 
     // --- Add State for Vote History ---
     const [voteHistory, setVoteHistory] = useState([]);
@@ -836,8 +874,12 @@ function AdvancedView() {
     // --- End Vote Year Filter State ---
 
     // --- Add State for Bill/Keyword Filter ---
-    const [filterBillNumber, setFilterBillNumber] = useState('');
-    const [filterKeyword, setFilterKeyword] = useState('');
+    // Local state for immediate input value
+    const [localFilterBillNumber, setLocalFilterBillNumber] = useState('');
+    const [localFilterKeyword, setLocalFilterKeyword] = useState('');
+    // Debounced state used for actual filtering
+    const filterBillNumber = useDebounce(localFilterBillNumber, 400); // 400ms delay
+    const filterKeyword = useDebounce(localFilterKeyword, 400);     // 400ms delay
     // --- End Bill/Keyword Filter State ---
 
     // --- Calculate available vote years ---
@@ -885,7 +927,10 @@ function AdvancedView() {
 
     // --- Filtering Logic (moved outside render function) ---
     const filteredVotes = useMemo(() => {
-        // console.log(`[VOTE_FILTER] Filtering votes. Year: ${selectedVoteYear}, Bill: ${filterBillNumber}, Keyword: ${filterKeyword}`); // DEBUG
+        // Ensure this depends on the DEBOUNCED values
+        console.log(`[VOTE_FILTER] START: Filtering votes. Year: ${selectedVoteYear}, Bill: ${filterBillNumber}, Keyword: ${filterKeyword}`); // DEBUG
+        const startTime = performance.now(); // Start timing
+        
         let votesToFilter = voteHistory;
 
         // Filter by Year (assuming date parsing is robust or handled separately)
@@ -903,7 +948,7 @@ function AdvancedView() {
             });
         }
 
-        // Filter by Bill Number (more defensive checks)
+        // Filter by Bill Number (using DEBOUNCED value)
         if (filterBillNumber.trim()) {
             const lowerFilterBill = filterBillNumber.trim().toLowerCase();
             votesToFilter = votesToFilter.filter(vote => {
@@ -916,7 +961,7 @@ function AdvancedView() {
             });
         }
 
-        // Filter by Keyword (more defensive checks)
+        // Filter by Keyword (using DEBOUNCED value)
         if (filterKeyword.trim()) {
             const lowerFilterKeyword = filterKeyword.trim().toLowerCase();
             votesToFilter = votesToFilter.filter(vote => {
@@ -929,9 +974,10 @@ function AdvancedView() {
             });
         }
         
-        // console.log(`[VOTE_FILTER] Filtered votes count after all filters: ${votesToFilter.length}`); // DEBUG
+        const endTime = performance.now(); // End timing
+        console.log(`[VOTE_FILTER] END: Filtering took ${(endTime - startTime).toFixed(2)}ms. Found ${votesToFilter.length} votes.`);
         return votesToFilter;
-    }, [voteHistory, selectedVoteYear, filterBillNumber, filterKeyword]);
+    }, [voteHistory, selectedVoteYear, filterBillNumber, filterKeyword]); // DEPENDS ON DEBOUNCED VALUES
     // --- End Filtering Logic ---
 
     // --- Add useEffect to Fetch Vote History ---
@@ -1011,10 +1057,51 @@ function AdvancedView() {
             return <span className={className}>{position}</span>;
         };
 
+        // Define the Row component for react-window
+        const VoteRow = ({ index, style }) => {
+            const vote = filteredVotes[index];
+            if (!vote) return null; // Handle potential edge case
+
+            return (
+                <ListGroup.Item 
+                    key={vote.vote_id || `vote-${index}`}
+                    style={style} // Apply style provided by react-window
+                    className="vote-item bg-transparent border-secondary text-white"
+                >
+                    <div className="vote-details mb-1">
+                        <span className="vote-date">{new Date(vote.date).toLocaleDateString()}</span>
+                        <span className="vote-chamber mx-1">({vote.chamber || 'Chamber N/A'})</span>
+                        {vote.bill_number && (
+                            <span className="vote-bill">
+                                {vote.bill_type?.toUpperCase() || ''} {vote.bill_number}
+                            </span>
+                        )}
+                    </div>
+                    <div className="vote-question mb-1">{vote.question}</div>
+                    {vote.description && (
+                        <div className="vote-description text-white-50 mb-2">{vote.description}</div>
+                    )}
+                    <div className="vote-member-action">
+                        <strong>Vote:</strong> {formatVotePosition(vote.member_vote_position)}
+                        <span className="vote-result ms-2 text-white-50">({vote.result || 'Result N/A'})</span>
+                    </div>
+                    {vote.source_url && (
+                        <div className="vote-source mt-1">
+                            <a href={vote.source_url} target="_blank" rel="noopener noreferrer" className="small text-info">
+                                View Source
+                            </a>
+                        </div>
+                    )}
+                </ListGroup.Item>
+            );
+        };
+
+        const ITEM_HEIGHT = 150; // Estimate average height - adjust as needed!
+
         return (
-            <div className="vote-history-section"> 
+            <div className="vote-history-section">
                 {/* Filter Row - Always visible */}
-                <Row className="mb-3 align-items-end vote-filter-row justify-content-start"> 
+                <Row className="mb-3 align-items-end vote-filter-row justify-content-start">
                     <Col md={3}>
                         <Form.Group controlId="voteYearFilter">
                             <Form.Label>Year</Form.Label>
@@ -1036,17 +1123,8 @@ function AdvancedView() {
                             <Form.Control 
                                 type="text"
                                 placeholder="Bill (e.g., HR 22)"
-                                value={filterBillNumber}
-                                onChange={(e) => {
-                                    try {
-                                        // Safely set the bill number
-                                        setFilterBillNumber(e.target.value || '');
-                                    } catch (error) {
-                                        console.error("Error updating bill filter:", error);
-                                        // Reset to empty if there's an error
-                                        setFilterBillNumber('');
-                                    }
-                                }}
+                                value={localFilterBillNumber}
+                                onChange={(e) => setLocalFilterBillNumber(e.target.value || '')}
                                 aria-label="Filter votes by bill number"
                                 name="billFilter"
                                 autoComplete="off"
@@ -1060,17 +1138,8 @@ function AdvancedView() {
                             <Form.Control
                                 type="text"
                                 placeholder="Keyword (in question/desc)"
-                                value={filterKeyword}
-                                onChange={(e) => {
-                                    try {
-                                        // Safely set the keyword
-                                        setFilterKeyword(e.target.value || '');
-                                    } catch (error) {
-                                        console.error("Error updating keyword filter:", error);
-                                        // Reset to empty if there's an error
-                                        setFilterKeyword('');
-                                    }
-                                }}
+                                value={localFilterKeyword}
+                                onChange={(e) => setLocalFilterKeyword(e.target.value || '')}
                                 aria-label="Filter votes by keyword"
                                 name="keywordFilter"
                                 autoComplete="off"
@@ -1083,8 +1152,8 @@ function AdvancedView() {
                             variant="secondary" 
                             onClick={() => {
                                 setSelectedVoteYear('All');
-                                setFilterBillNumber('');
-                                setFilterKeyword('');
+                                setLocalFilterBillNumber('');
+                                setLocalFilterKeyword('');
                             }}
                             className="w-100"
                             aria-label="Clear vote filters"
@@ -1093,7 +1162,7 @@ function AdvancedView() {
                         </Button>
                     </Col>
                 </Row>
-                
+
                 {/* Container always visible */}
                 <div className="vote-scroll-container">
                     {/* Loading state INSIDE container */}
@@ -1105,38 +1174,20 @@ function AdvancedView() {
                     ) : voteError && voteHistory.length === 0 ? (
                         <p className="text-center text-warning small mt-3">{voteError}</p>
                     ) : voteHistory.length > 0 && filteredVotes.length === 0 ? (
-                        <p className="text-center text-white-50 small mt-3">No votes found for the year {selectedVoteYear}.</p>
+                        <p className="text-center text-white-50 small mt-3">No votes found matching filters.</p> /* Updated message */
+                    ) : voteHistory.length === 0 && !voteError ? (
+                        <p className="text-center text-white-50 small mt-3">No vote history available for this member.</p> /* Handle case with 0 initial votes */
                     ) : (
-                        <ListGroup variant="flush" className="vote-list">
-                            {filteredVotes.map((vote, index) => (
-                                <ListGroup.Item key={vote.vote_id || `vote-${index}`} className="vote-item bg-transparent border-secondary text-white">
-                                    <div className="vote-details mb-1">
-                                        <span className="vote-date">{new Date(vote.date).toLocaleDateString()}</span>
-                                        <span className="vote-chamber mx-1">({vote.chamber || 'Chamber N/A'})</span>
-                                        {vote.bill_number && (
-                                            <span className="vote-bill">
-                                                {vote.bill_type?.toUpperCase() || ''} {vote.bill_number}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="vote-question mb-1">{vote.question}</div>
-                                    {vote.description && (
-                                        <div className="vote-description text-white-50 mb-2">{vote.description}</div>
-                                    )}
-                                    <div className="vote-member-action">
-                                        <strong>Vote:</strong> {formatVotePosition(vote.member_vote_position)}
-                                        <span className="vote-result ms-2 text-white-50">({vote.result || 'Result N/A'})</span>
-                                    </div>
-                                    {vote.source_url && (
-                                        <div className="vote-source mt-1">
-                                            <a href={vote.source_url} target="_blank" rel="noopener noreferrer" className="small text-info">
-                                                View Source
-                                            </a>
-                                        </div>
-                                    )}
-                                </ListGroup.Item>
-                            ))}
-                        </ListGroup>
+                        /* Replace direct map with FixedSizeList */
+                        <FixedSizeList
+                            height={450} /* Match container height from CSS */
+                            itemCount={filteredVotes.length}
+                            itemSize={ITEM_HEIGHT} /* Use estimated item height */
+                            width={'100%'} /* Take full width */
+                            className="vote-list" /* Add class for potential styling */
+                        >
+                            {VoteRow} 
+                        </FixedSizeList>
                     )}
                 </div>
             </div>
