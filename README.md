@@ -1,6 +1,6 @@
 # Watchdog - Congressional Monitoring Platform
 
-Watchdog is a web application designed to provide citizens with accessible information about the U.S. Congress. It allows users to explore data on current members of the House and Senate, their committee assignments, and basic biographical information.
+Watchdog is a web application designed to provide citizens with accessible and performant information about the U.S. Congress. It allows users to explore data on current members of the House and Senate, their committee assignments, and detailed vote histories.
 
 ## Project Structure
 
@@ -17,9 +17,11 @@ Watchdog is a web application designed to provide citizens with accessible infor
     *   `requirements.txt`: Python dependencies for the backend.
     *   `.env` / `.env.example`: Environment variable configuration (if used).
 *   `frontend/`: Contains the React frontend application built with Vite.
-*   `congress_tools/`: **(Local Only - Not Committed)** Directory created locally when `update_bill_vote_data.py` is run. Contains a clone of the `unitedstates/congress` repository and its tools/dependencies. Ignored by Git.
     *   `src/`: Frontend source code (components, pages, styles).
     *   `package.json`: Node.js dependencies and scripts.
+    *   `vite.config.js`: Vite configuration file (port, proxy, asset handling).
+    *   `index.html`: Main HTML entry point.
+*   `congress_tools/`: **(Local Only - Not Committed)** Directory created locally when `update_bill_vote_data.py` is run. Contains a clone of the `unitedstates/congress` repository and its tools/dependencies. Ignored by Git.
 *   `README.md`: This file.
 *   `.gitignore`: Specifies intentionally untracked files that Git should ignore.
 
@@ -111,6 +113,7 @@ This generated data (for Congresses 94-119) is included directly in this reposit
     ```bash
     npm install
     ```
+    *(This includes `react-window` added for performance optimization.)*
 
 3.  **Configure Frontend Environment (If applicable):**
     The frontend might use environment variables (e.g., `VITE_API_URL` in `.env` within the `frontend` directory) to know where the backend API is located. Ensure this is set correctly (e.g., `VITE_API_URL=http://localhost:8000`). Check for a `.env.example` file in the frontend directory.
@@ -119,7 +122,7 @@ This generated data (for Congresses 94-119) is included directly in this reposit
     ```bash
     npm run dev
     ```
-    The frontend application should now be accessible in your browser, typically at `http://localhost:5173` (Vite often uses port 5173 by default).
+    The frontend application should now be accessible in your browser at `http://localhost:3000` (as configured in `vite.config.js`).
 
 ## Updating Congressional Data
 
@@ -145,10 +148,23 @@ Once the backend server is running, interactive API documentation (provided by F
 *   Swagger UI: `http://localhost:8000/docs`
 *   ReDoc: `http://localhost:8000/redoc`
 
+## Performance Optimizations
+
+Several performance enhancements have been implemented:
+
+**Frontend:**
+*   **List Virtualization:** The member search results and vote history lists use `react-window` to render only the visible items, significantly improving performance when displaying large amounts of data.
+*   **Input Debouncing:** Text input fields for filtering vote history (Bill Number, Keyword) are debounced to prevent excessive filtering calculations and re-renders while typing.
+*   **Image Optimization:** Large background images have been converted to the efficient WebP format.
+*   **Asset Preloading:** Critical assets like the main background image are preloaded using `<link rel="preload">` for faster initial page rendering.
+
+**Backend:**
+*   **In-Memory Caching:** Member vote history is cached in memory (`cachetools.TTLCache`) on the backend for a configurable duration (e.g., 1 hour). This significantly speeds up subsequent requests for the same member's vote data during a server session.
+
 ## Technology Stack
 
-*   **Backend**: FastAPI (Python), Uvicorn, PyYAML
-*   **Frontend**: React, Vite, React Router, React Bootstrap
+*   **Backend**: FastAPI (Python), Uvicorn, PyYAML, `cachetools`
+*   **Frontend**: React, Vite, React Router, React Bootstrap, `react-window`
 *   **Data Source**: YAML files from `unitedstates/congress-legislators`
 *   **Data Generation Tools (Local)**: `unitedstates/congress` tools (run locally via script)
 

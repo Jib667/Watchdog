@@ -1,6 +1,7 @@
 import './Home.css';
 import { useContext, useEffect, useState, useRef } from 'react';
-import capitolBackground from '../assets/capitol_background.png';
+import capitolBackground from '../assets/capitol_background.webp';
+import MemberCard from '../components/MemberCard';
 
 const Home = ({ onSignUpClick }) => {
   // Updated rotating words - using 'organize', 'converse', 'advocate', 'assemble'

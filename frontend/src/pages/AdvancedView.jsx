@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation, useParams, Link, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Form, Button, Spinner, Alert, Badge, ListGroup, Image } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Spinner, Alert, Badge, ListGroup, Image, ProgressBar } from 'react-bootstrap';
 import { FixedSizeList } from 'react-window'; // Import react-window
 import './AdvancedView.css'; // Updated CSS import
 import { useSelector } from 'react-redux';
@@ -1167,9 +1167,18 @@ function AdvancedView() {
                 <div className="vote-scroll-container">
                     {/* Loading state INSIDE container */}
                     {loadingVotes ? (
-                        <div className="text-center my-5">
-                            <Spinner animation="border" size="sm" />
-                            <p className="mt-1 small text-white-50">Loading Votes...</p>
+                        <div className="text-center my-5 vote-loading-indicator">
+                            {/* Wrapper to control ProgressBar width */}
+                            <div style={{ maxWidth: '300px', margin: '0 auto' }}> 
+                                <ProgressBar 
+                                    animated 
+                                    now={100} 
+                                    label="Loading Votes..." 
+                                    visuallyHidden 
+                                    style={{ height: '10px' }} 
+                                />
+                            </div>
+                            <p className="mt-2 small text-white-50">Loading Votes...</p>
                         </div>
                     ) : voteError && voteHistory.length === 0 ? (
                         <p className="text-center text-warning small mt-3">{voteError}</p>

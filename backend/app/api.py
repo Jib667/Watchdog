@@ -10,6 +10,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlite3 import Row, IntegrityError
 from pathlib import Path
+import asyncio # For async lock if needed later, though sync cache is simpler here
+from cachetools import TTLCache
+from threading import Lock
 
 # Import from consolidated core and db modules
 from .core import (
@@ -34,6 +37,13 @@ from .core import (
     ADMIN_PASSWORD
 )
 from .db import get_db_connection, Token, TokenData, User, UserCreate, UserInDB
+
+# --- In-Memory Cache for Votes --- #
+# Cache holds up to 500 members' vote history for 1 hour (3600 seconds)
+vote_cache = TTLCache(maxsize=500, ttl=3600)
+# Using a simple lock for thread-safety in sync context, though less critical with GIL
+# For async endpoints, asyncio.Lock would be better
+cache_lock = Lock()
 
 # --- Router Setup --- #
 # Single router for all API endpoints
@@ -440,27 +450,43 @@ def get_member_by_congress_id(congress_id: str):
 
 @router.get("/members/{bioguide_id}/votes", response_model=List[Dict[str, Any]], summary="Get Member Vote History", description="Retrieves the recorded vote history for a specific member by their bioguide_id.")
 def get_votes_for_member(bioguide_id: str):
-    """Fetch vote history for a given member by their bioguide ID."""
-    print(f"[API_DEBUG] Entered get_votes_for_member for bioguide_id: {bioguide_id}") # DEBUG
+    """Get vote history for a member, using an in-memory cache."""
+    # Check cache first (thread-safe)
+    with cache_lock:
+        if bioguide_id in vote_cache:
+            print(f"[Cache] HIT for votes: {bioguide_id}")
+            return vote_cache[bioguide_id]
+
+    print(f"[Cache] MISS for votes: {bioguide_id}. Fetching from core function...")
+    # If not in cache, call the actual function
     try:
-        votes = get_member_vote_history(bioguide_id)
+        # Assuming get_member_vote_history handles file reading/parsing
+        votes_data = get_member_vote_history(bioguide_id)
         
-        # Explicitly check if the result is empty and return 200 OK with []
-        if not votes:
-            print(f"[API_DEBUG] Core function returned no votes for {bioguide_id}. Returning empty list.") # DEBUG
-            return [] # Return empty list, which results in 200 OK
+        # Check if data was successfully fetched before caching
+        if votes_data:
+            # Store in cache (thread-safe)
+            with cache_lock:
+                vote_cache[bioguide_id] = votes_data
+            print(f"[Cache] Stored votes for: {bioguide_id}")
+            return votes_data
         else:
-            print(f"[API_DEBUG] Core function returned {len(votes)} votes for {bioguide_id}. Returning list.") # DEBUG
-            return votes
-            
+            # Handle case where get_member_vote_history returns None or empty list (no votes found)
+            # Don't cache this result, just return it.
+            print(f"[Cache] No vote data found by core function for: {bioguide_id}. Not caching.")
+            # Return empty list or appropriate response if votes not found
+            return [] # Or raise HTTPException(status_code=404, detail="No vote history found") if preferred
+
+    except FileNotFoundError:
+        # Specific error if the underlying function raises this for a missing member/data
+        print(f"[API] Vote data file not found for: {bioguide_id}")
+        raise HTTPException(status_code=404, detail=f"Vote history data not found for member {bioguide_id}")
     except Exception as e:
-        # Log any unexpected errors from the core function
-        print(f"[API_DEBUG] Error calling get_member_vote_history for {bioguide_id}: {e}") # DEBUG
-        # Raise a 500 error for internal issues
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=f"Internal error fetching vote history for {bioguide_id}"
-        )
+        # Catch other potential errors during data fetching/processing
+        print(f"[API] Error fetching vote history for {bioguide_id}: {e}")
+        # Log the full error for debugging
+        # logger.exception(f"Error fetching vote history for {bioguide_id}") 
+        raise HTTPException(status_code=500, detail="Internal server error processing vote history")
 
 # Example protected route (requires authentication) - Assuming this belongs on the router
 @router.get("/api/secure-data", summary="Access Secure Data", description="Example of a protected endpoint requiring authentication.", tags=["auth"]) # Added tag for consistency
