@@ -331,10 +331,7 @@ function AdvancedView() {
         setMember(null); // Clear previous member data
         setSearchResults([]); // Clear search results when loading specific member
         console.log(`[loadMemberById] Attempting to load member by ID: ${id}`);
-        
-        // Scroll to top of the page
-        window.scrollTo(0, 0);
-        
+
         try {
             const response = await fetch(`${API_URL}/api/congress/member/${id}`);
              if (!response.ok) {
@@ -466,8 +463,14 @@ function AdvancedView() {
     
     // Add a new effect specifically for scrolling to top when member changes
     useEffect(() => {
+        // Ensure scroll happens after potential re-render
         if (member) {
-            window.scrollTo(0, 0);
+            console.log("[ScrollEffect] Member updated, attempting scroll to top.");
+            const timer = setTimeout(() => {
+                window.scrollTo(0, 0);
+                console.log("[ScrollEffect] Scrolled to top.");
+            }, 0); // Execute after current stack
+            return () => clearTimeout(timer); // Cleanup timeout
         }
     }, [member]);
 
