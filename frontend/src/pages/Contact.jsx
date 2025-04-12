@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Form, Button, Alert } from 'react-bootstrap';
 import './Contact.css';
 
 const Contact = () => {
@@ -12,6 +13,11 @@ const Contact = () => {
   });
 
   const [submitStatus, setSubmitStatus] = useState(null);
+
+  // Scroll to top of page when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

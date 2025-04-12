@@ -16,6 +16,18 @@ import Contact from './pages/Contact'
 import AdminPage from './pages/AdminPage'
 import AdvancedView from './pages/AdvancedView'
 
+// Create ScrollToTop component to handle route changes
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  
+  useEffect(() => {
+    // Always scroll to top when route changes
+    window.scrollTo(0, 0);
+  }, [pathname]); // This effect runs on every path change
+  
+  return null; // This component doesn't render anything
+}
+
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -26,7 +38,6 @@ function App() {
 
   const location = useLocation();
   
- 
   useEffect(() => {
     console.log("Sidebar state changed:", sidebarOpen);
   }, [sidebarOpen]);
@@ -205,8 +216,8 @@ function App() {
       </header>
       
       <main className="main-content">
+        <ScrollToTop />
         <Routes>
-          {/* Remove keys - they didn't solve the loading issue */}
           <Route path="/" element={<Home onSignUpClick={handleSignUpClick} />} />
           <Route path="/home" element={<Home onSignUpClick={handleSignUpClick} />} />
           <Route path="/representatives" element={<Representatives />} />

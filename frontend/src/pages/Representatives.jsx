@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Container } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, ListGroup, Spinner } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import { useLocation } from 'react-router-dom'; // Import useLocation
 import MemberCard from '../components/MemberCard'; // Import the MemberCard component
@@ -21,6 +22,11 @@ const Representatives = () => {
   const [selectedMember, setSelectedMember] = useState(null);
 
   const location = useLocation(); // Get location object
+
+  // Scroll to top of page when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   // Fetch state GeoJSON data
   useEffect(() => {

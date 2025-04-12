@@ -94,6 +94,11 @@ function AdvancedView() {
     const { memberId } = useParams(); // Get memberId from URL if present
     const navigate = useNavigate();
 
+    // Scroll to top of page when component mounts or when member changes
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [member, memberId]);
+    
     // ----- Image Handling With Pre-Caching -----
     const [currentImageUrl, setCurrentImageUrl] = useState('');
     const [imageUrlVariations, setImageUrlVariations] = useState([]);
@@ -1198,19 +1203,29 @@ function AdvancedView() {
             
             // NOMINATION HANDLING
             if (vote.category === 'nomination' || vote.type?.toLowerCase().includes('nomination')) {
+                console.log('[LinkGen] Processing nomination vote:', vote.question);
+                
                 // Try to extract nomination number from JSON data
                 if (vote.nomination && vote.nomination.number && congress) {
-                    console.log('[LinkGen] Using Nomination Link');
+                    console.log('[LinkGen] Using Nomination Link from JSON data');
                     return `https://www.congress.gov/nomination/${congress}th-congress/${vote.nomination.number}`;
                 }
                 
-                // Try to extract nomination number from question
+                // Try to extract nomination number from question with improved regex
                 if (vote.question) {
-                    // Look for PN followed by numbers (PN1234)
-                    const nomMatch = vote.question.match(/PN\s*(\d+)/i);
-                    if (nomMatch && nomMatch[1] && congress) {
-                        console.log('[LinkGen] Using Nomination Link from PN number in question');
-                        return `https://www.congress.gov/nomination/${congress}th-congress/${nomMatch[1]}`;
+                    // Handle formats like "PN11-13" or "PN 11-13" (hyphenated format)
+                    const hyphenatedNomMatch = vote.question.match(/PN\s*(\d+)-(\d+)/i);
+                    if (hyphenatedNomMatch && hyphenatedNomMatch[1] && hyphenatedNomMatch[2] && congress) {
+                        console.log(`[LinkGen] Extracted hyphenated nomination: PN${hyphenatedNomMatch[1]}-${hyphenatedNomMatch[2]}`);
+                        // Use the full hyphenated format for URL
+                        return `https://www.congress.gov/nomination/${congress}th-congress/${hyphenatedNomMatch[1]}/${hyphenatedNomMatch[2]}`;
+                    }
+                    
+                    // Fallback for standard "PN123" format (single number)
+                    const standardNomMatch = vote.question.match(/PN\s*(\d+)(?!-)/i);
+                    if (standardNomMatch && standardNomMatch[1] && congress) {
+                        console.log(`[LinkGen] Extracted standard nomination: PN${standardNomMatch[1]}`);
+                        return `https://www.congress.gov/nomination/${congress}th-congress/${standardNomMatch[1]}`;
                     }
                 }
             }
@@ -1547,7 +1562,11 @@ function AdvancedView() {
                             itemCount={filteredVotes.length}
                             itemSize={ITEM_HEIGHT} /* Use estimated item height */
                             width={'100%'} /* Take full width */
-                            className="vote-list" /* Add class for potential styling */
+                            className="vote-list no-scrollbar" /* Add no-scrollbar class */
+                            style={{
+                                overflowY: 'visible', /* Make inner scrollbar invisible */
+                                overflowX: 'hidden'
+                            }}
                         >
                             {VoteRow} 
                         </FixedSizeList>
@@ -1754,7 +1773,7 @@ function AdvancedView() {
                     </Row>
                     
                     {/* --- Vote History Row (Full Width) --- */}
-                    <Row className="mt-3"> 
+                    <Row className="mt-0"> {/* Changed from mt-3 to mt-0 to remove top margin */}
                         <Col xs={12}>
                             <ErrorBoundary>
                                 {renderVoteHistory()} 

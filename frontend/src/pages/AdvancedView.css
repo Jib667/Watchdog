@@ -708,22 +708,45 @@ img.rounded-circle {
   background: rgba(255, 255, 255, 0.5);
 }
 
-/* --- Vote History Styles --- */
-
+/* Vote history section styling */
 .vote-history-section {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  margin-top: 0.0rem; /* Further reduced margin-top to move section up */
+  padding: 1.5rem;
+  background-color: rgba(30, 58, 95, 0.7);
+  border-radius: 8px;
+  margin-top: 0.5rem; /* Reduced from 2rem to 0.5rem to move it up */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Adjust title margin (if title were present) */
-/* .vote-history-section .section-title {
-    margin-bottom: 0.5rem; 
-    padding-left: 0; 
-} */
+/* Vote scroll container - container for the list */
+.vote-scroll-container {
+  height: 450px;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  margin-top: 1rem;
+  padding: 0;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
 
-/* --- Vote Filter Row Styles --- */
+/* Vote list - inner component, should not have its own scrollbar */
+.vote-list {
+  width: 100%;
+}
+
+/* Add a utility class to hide scrollbars on specific elements */
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari and Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Vote Filter Row Styles */
 .vote-history-section .row {
 }
 
@@ -762,40 +785,6 @@ img.rounded-circle {
 .vote-history-section .form-select option {
   background-color: #1e3a5f;
   color: white;
-}
-
-/* Apply container styles ONLY to the scroll container */
-.vote-scroll-container {
-    flex-grow: 1;
-    overflow-y: auto;
-    max-height: 450px; /* Set maximum height */
-    padding: 0.5rem; /* Add padding */
-    border: 1px solid rgba(255, 255, 255, 0.1); /* Add border */
-    border-radius: 6px; /* Add radius */
-    background-color: rgba(0, 0, 0, 0.1); /* Add background */
-}
-
-/* Style scrollbar (optional, for Webkit browsers) */
-.vote-scroll-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.vote-scroll-container::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-
-.vote-scroll-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 3px;
-}
-
-.vote-scroll-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.vote-list {
-  padding-left: 0;
 }
 
 .vote-item {

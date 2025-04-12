@@ -38,6 +38,11 @@ const Home = ({ onSignUpClick }) => {
     );
   };
   
+  // Scroll to top of page when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+  
   return (
     <div className="home-page">
       <div className="capitol-background-container">
