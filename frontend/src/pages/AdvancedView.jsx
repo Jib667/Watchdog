@@ -404,7 +404,7 @@ function AdvancedView() {
         if (searchTerm.committee) queryParams.append('committee', searchTerm.committee); 
 
         const searchUrl = `${API_URL}/api/congress/search?${queryParams.toString()}`;
-        console.log("Search URL:", searchUrl);
+        // console.log("Search URL:", searchUrl);
 
         try {
             const response = await fetch(searchUrl);
@@ -423,6 +423,7 @@ function AdvancedView() {
             }
             
             // Debug committee filtering
+            /*
             if (searchTerm.committee) {
                 console.log("Committee filtering debug:");
                 console.log(`- Looking for committee ID: ${searchTerm.committee}`);
@@ -472,6 +473,7 @@ function AdvancedView() {
                     }
                 }
             }
+            */
             
             setSearchResults(data);
              if (data.length === 0) {
@@ -593,9 +595,10 @@ function AdvancedView() {
                             value={searchTerm.committee} 
                             onChange={(e) => {
                                 const committeeId = e.target.value;
-                                console.log(`Selected committee ID: ${committeeId}`);
+                                // console.log(`Selected committee ID: ${committeeId}`);
                                 
                                 // Also log the matching committee name for reference
+                                /*
                                 if (committeeId) {
                                     const selectedCommittee = committees.find(c => c.committee_id === committeeId);
                                     if (selectedCommittee) {
@@ -603,6 +606,7 @@ function AdvancedView() {
                                         console.log(`Committee details: ${JSON.stringify(selectedCommittee)}`);
                                     }
                                 }
+                                */
                                 handleSearchChange(e);
                             }}
                             disabled={!committees.length}
@@ -691,7 +695,7 @@ function AdvancedView() {
                                     <Image
                                         src={res.currentImageUrl} 
                                         onError={(e) => {
-                                            console.log("Image failed to load:", res.currentImageUrl);
+                                            // console.log("Image failed to load:", res.currentImageUrl);
                                             e.target.onerror = null; // Prevent infinite loop
                                             const nextUrl = tryNextImageVariation(res);
                                             if (nextUrl) {
@@ -741,7 +745,7 @@ function AdvancedView() {
 
     // --- Calculate available vote years ---
     const availableVoteYears = useMemo(() => {
-        console.log("[VOTE_YEARS] Recalculating available years from voteHistory length:", voteHistory.length);
+        // console.log("[VOTE_YEARS] Recalculating available years from voteHistory length:", voteHistory.length);
         const yearSet = new Set();
         let invalidDateCount = 0;
         
@@ -763,28 +767,28 @@ function AdvancedView() {
                     invalidDateCount++;
                     // Only log invalid dates once to avoid flooding console
                     if (invalidDateCount < 10) { // Log first few invalid dates
-                         console.warn(`[VOTE_YEARS] Invalid date format encountered: ${vote.date} for vote_id: ${vote.vote_id || 'N/A'}`); 
+                         // console.warn(`[VOTE_YEARS] Invalid date format encountered: ${vote.date} for vote_id: ${vote.vote_id || 'N/A'}`); 
                     }
                 }
             } catch (e) { 
-                 console.error(`[VOTE_YEARS] Error parsing date string: ${vote.date}`, e);
+                 // console.error(`[VOTE_YEARS] Error parsing date string: ${vote.date}`, e);
                  invalidDateCount++;
             }
         });
         
         if (invalidDateCount >= 10) {
-             console.warn(`[VOTE_YEARS] ... and ${invalidDateCount - 9} more invalid date formats encountered.`);
+             // console.warn(`[VOTE_YEARS] ... and ${invalidDateCount - 9} more invalid date formats encountered.`);
         }
         
         const sortedYears = Array.from(yearSet).sort((a, b) => b - a);
-        console.log("[VOTE_YEARS] Final calculated unique years (using Set):", sortedYears); // Log the final list
+        // console.log("[VOTE_YEARS] Final calculated unique years (using Set):", sortedYears); // Log the final list
         return sortedYears;
     }, [voteHistory]);
     // --- End Calculate Vote Years ---
 
     // --- Filtering Logic (moved outside render function) ---
     const filteredVotes = useMemo(() => {
-        console.log(`[VOTE_FILTER] Filtering votes. Year: ${selectedVoteYear}, Bill: ${filterBillNumber}, Keyword: ${filterKeyword}`); // DEBUG
+        // console.log(`[VOTE_FILTER] Filtering votes. Year: ${selectedVoteYear}, Bill: ${filterBillNumber}, Keyword: ${filterKeyword}`); // DEBUG
         let votesToFilter = voteHistory;
 
         // Filter by Year
@@ -824,7 +828,7 @@ function AdvancedView() {
             );
         }
         
-        console.log(`[VOTE_FILTER] Filtered votes count after all filters: ${votesToFilter.length}`); // DEBUG
+        // console.log(`[VOTE_FILTER] Filtered votes count after all filters: ${votesToFilter.length}`); // DEBUG
         return votesToFilter;
     }, [voteHistory, selectedVoteYear, filterBillNumber, filterKeyword]);
     // --- End Filtering Logic ---
@@ -836,7 +840,7 @@ function AdvancedView() {
                 setLoadingVotes(true);
                 setVoteError('');
                 setVoteHistory([]); // Clear previous votes
-                console.log(`Fetching vote history for bioguide_id: ${member.bioguide_id}`);
+                // console.log(`Fetching vote history for bioguide_id: ${member.bioguide_id}`);
                 try {
                     const response = await fetch(`${API_URL}/api/members/${member.bioguide_id}/votes`);
                     if (!response.ok) {
@@ -849,14 +853,16 @@ function AdvancedView() {
                         setVoteHistory([]); // Ensure empty on error
                     } else {
                         const data = await response.json();
-                        console.log("Vote history fetched:", data);
-                        // --- DEBUG: Log dates of first/last few votes --- 
+                        // console.log("Vote history fetched:", data);
+                        // --- DEBUG: Log dates of first/last few votes ---
+                        /*
                         if (Array.isArray(data) && data.length > 0) {
                             const firstFewDates = data.slice(0, 5).map(v => v.date);
                             const lastFewDates = data.slice(-5).map(v => v.date);
                             console.log("[VOTE_DATE_CHECK] Dates of first 5 votes received:", firstFewDates);
                             console.log("[VOTE_DATE_CHECK] Dates of last 5 votes received:", lastFewDates);
                         }
+                        */
                         // --- END DEBUG ---
                         if (Array.isArray(data)) {
                             setVoteHistory(data);
@@ -940,11 +946,11 @@ function AdvancedView() {
 
         return (
             <div className="vote-history-section">
-                {/* --- Filter Row --- */}
-                <Row className="mb-3 align-items-end">
+                {/* --- Title & Filter Row --- */}
+                <Row className="mb-3 justify-content-center align-items-center"> {/* Center title and filters */}
                     {/* Title */}
                     <Col xs={12} md="auto" className="mb-2 mb-md-0">
-                        <h5 className="text-white section-title mb-0">Recent Vote History</h5>
+                        <h5 className="text-white section-title mb-0">Vote History</h5>
                     </Col>
                     {/* Year Filter */}
                     <Col xs={6} sm={4} md={2} className="mb-2 mb-md-0">
@@ -1085,14 +1091,14 @@ function AdvancedView() {
                     </Row>
                 </Card.Header>
                 <Card.Body>
-                    <Row className="mb-4">
+                    <Row className="mb-4 align-items-stretch">
                         {/* === Left Column: Image === */}
-                        <Col md={4} className="text-center mb-4 mb-md-0">
-                            <div className="profile-image-container">
+                        <Col md={4} className="text-center mb-4 mb-md-0 d-flex flex-column">
+                            <div className="profile-image-container flex-grow-1">
                                 <Image
                                     src={currentImageUrl} 
                                     onError={(e) => {
-                                        console.log("Image failed to load:", currentImageUrl);
+                                        // console.log("Image failed to load:", currentImageUrl);
                                         e.target.onerror = null; // Prevent infinite loop
                                         handleImageError(); // Try next variation
                                     }}
@@ -1113,7 +1119,8 @@ function AdvancedView() {
                         </Col>
                         
                         {/* === Middle Column: General Information === */}
-                        <Col md={4} className="mb-4 mb-md-0">
+                        <Col md={4} className="mb-4 mb-md-0 d-flex flex-column">
+                            <div className="flex-grow-1">
                             <h4 className="mb-3 text-white section-title">General Information</h4>
                             <ListGroup variant="flush">
                                 {(member.term_start || member.term_end) && (
@@ -1150,7 +1157,7 @@ function AdvancedView() {
                                         {member.contact_form ? (
                                             <a href={member.contact_form} target="_blank" rel="noopener noreferrer" className="text-white">Official Contact Form</a>
                                         ) : (
-                                            <span></span> 
+                                                <span></span> 
                                         )}
                                     </span>
                                 </ListGroup.Item>
@@ -1161,14 +1168,16 @@ function AdvancedView() {
                                     </ListGroup.Item>
                                 )}
                             </ListGroup>
+                            </div>
                         </Col>
                         
-                        {/* === Right Column: Committee Assignments === */}
-                        <Col md={4}>
-                            {/* Committee Assignments Section */}
+                        {/* === Right Column: Committee Assignments (Restored) === */}
+                        <Col md={4} className="d-flex flex-column">
+                            <div className="flex-grow-1">
+                                {/* Committee Assignments Section */}
                             {uniqueSubcommittees && uniqueSubcommittees.length > 0 ? (
-                                <div className="committee-section mb-4">
-                                    <h5 className="mb-3 text-white section-title">Committee Assignments</h5>
+                                    <div className="committee-section mb-4">
+                                        <h5 className="mb-3 text-white section-title">Committee Assignments</h5>
                                     <div className="committee-scroll-container"> 
                                         <ListGroup className="committee-assignments-list">
                                             {uniqueSubcommittees.map((committee, index) => (
@@ -1199,14 +1208,13 @@ function AdvancedView() {
                                             ))}
                                         </ListGroup>
                                     </div>
-                                </div> 
+                                    </div> 
                             ) : (
-                                <div className="text-center text-white-50 my-4">
+                                    <div className="text-center text-white-50 my-4">
                                     No current committee assignments found.
                                 </div>
                             )}
-
-                            {/* --- VOTE HISTORY MOVED --- */}
+                            </div>
                         </Col>
                     </Row>
                     

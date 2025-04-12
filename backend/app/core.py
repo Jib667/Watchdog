@@ -762,14 +762,14 @@ def get_member_vote_history(bioguide_id: str) -> List[Dict[str, Any]]:
     
     # --- Get the LIS ID for comparison ---
     lis_id = get_lis_id_from_bioguide(bioguide_id)
-    print(f"[VOTE_DEBUG] Searching for votes for bioguide_id: {bioguide_id} (LIS ID: {lis_id}) in {congress_data_path}") # DEBUG
+    # print(f"[VOTE_DEBUG] Searching for votes for bioguide_id: {bioguide_id} (LIS ID: {lis_id}) in {congress_data_path}") # DEBUG
 
     if not congress_data_path.is_dir():
-        print(f"[VOTE_DEBUG] Error: Congress data directory not found: {congress_data_path}") # DEBUG
+        # print(f"[VOTE_DEBUG] Error: Congress data directory not found: {congress_data_path}") # DEBUG
         return []
 
     # Iterate through each Congress number directory (e.g., '117', '118')
-    print(f"[VOTE_DEBUG] Iterating through congress directories in {congress_data_path}...") # DEBUG
+    # print(f"[VOTE_DEBUG] Iterating through congress directories in {congress_data_path}...") # DEBUG
     found_any_congress_dir = False
     for congress_dir in congress_data_path.iterdir():
         if not congress_dir.is_dir() or not congress_dir.name.isdigit():
@@ -843,18 +843,20 @@ def get_member_vote_history(bioguide_id: str) -> List[Dict[str, Any]]:
                     vote_history.append(vote_info)
 
             except json.JSONDecodeError:
-                print(f"[VOTE_DEBUG] Warning: Could not decode JSON from file: {item}") # DEBUG
+                # print(f"[VOTE_DEBUG] Warning: Could not decode JSON from file: {item}") # DEBUG
+                pass # Silently ignore decode errors for now
             except Exception as e:
-                print(f"[VOTE_DEBUG] Warning: Error processing vote file {item}: {e}") # DEBUG
+                # print(f"[VOTE_DEBUG] Warning: Error processing vote file {item}: {e}") # DEBUG
+                pass # Silently ignore other file processing errors
         
         # if not found_any_json:
             # print(f"[VOTE_DEBUG] No data.json files found using rglob in {votes_path}") # DEBUG
 
     if not found_any_congress_dir:
-        print(f"[VOTE_DEBUG] No congress directories found in {congress_data_path}") # DEBUG
+        # print(f"[VOTE_DEBUG] No congress directories found in {congress_data_path}") # DEBUG
+        pass
 
     # Sort votes by date, most recent first
-    # Handle potential errors if 'date' is missing or not a valid ISO format string
     def get_sort_key(vote):
         date_str = vote.get('date')
         if date_str:
@@ -865,29 +867,29 @@ def get_member_vote_history(bioguide_id: str) -> List[Dict[str, Any]]:
                 return dt_obj 
             except ValueError as e:
                 # Fallback for unexpected date formats - treat as oldest
-                print(f"[SORT_DEBUG] ValueError parsing date '{date_str}' for vote_id {vote.get('vote_id')}: {e}") # DEBUG
+                # print(f"[SORT_DEBUG] ValueError parsing date '{date_str}' for vote_id {vote.get('vote_id')}: {e}") # DEBUG
                 return datetime.min
             except Exception as e:
                 # Catch any other unexpected errors during parsing
-                print(f"[SORT_DEBUG] Unexpected error parsing date '{date_str}' for vote_id {vote.get('vote_id')}: {e}") # DEBUG
+                # print(f"[SORT_DEBUG] Unexpected error parsing date '{date_str}' for vote_id {vote.get('vote_id')}: {e}") # DEBUG
                 return datetime.min
         else:
-            print(f"[SORT_DEBUG] Missing date for vote_id {vote.get('vote_id')}") # DEBUG
+            # print(f"[SORT_DEBUG] Missing date for vote_id {vote.get('vote_id')}") # DEBUG
             return datetime.min # Treat votes without a date as the oldest
 
     # --- DEBUG: Log first/last few votes BEFORE sorting ---
-    if len(vote_history) > 10:
-        print("[SORT_DEBUG] First 5 vote dates BEFORE sorting:", [v.get('date') for v in vote_history[:5]])
-        print("[SORT_DEBUG] Last 5 vote dates BEFORE sorting:", [v.get('date') for v in vote_history[-5:]])
+    # if len(vote_history) > 10:
+        # print("[SORT_DEBUG] First 5 vote dates BEFORE sorting:", [v.get('date') for v in vote_history[:5]])
+        # print("[SORT_DEBUG] Last 5 vote dates BEFORE sorting:", [v.get('date') for v in vote_history[-5:]])
     # --- END DEBUG ---
     
     vote_history.sort(key=get_sort_key, reverse=True)
 
     # --- DEBUG: Log first/last few votes AFTER sorting ---
-    if len(vote_history) > 10:
-        print("[SORT_DEBUG] First 5 vote dates AFTER sorting:", [v.get('date') for v in vote_history[:5]])
-        print("[SORT_DEBUG] Last 5 vote dates AFTER sorting:", [v.get('date') for v in vote_history[-5:]])
+    # if len(vote_history) > 10:
+        # print("[SORT_DEBUG] First 5 vote dates AFTER sorting:", [v.get('date') for v in vote_history[:5]])
+        # print("[SORT_DEBUG] Last 5 vote dates AFTER sorting:", [v.get('date') for v in vote_history[-5:]])
     # --- END DEBUG ---
 
-    print(f"[VOTE_DEBUG] Found {len(vote_history)} votes for bioguide_id: {bioguide_id}") # DEBUG
+    # print(f"[VOTE_DEBUG] Found {len(vote_history)} votes for bioguide_id: {bioguide_id}") # DEBUG
     return vote_history
