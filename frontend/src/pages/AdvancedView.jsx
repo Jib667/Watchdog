@@ -841,6 +841,10 @@ function AdvancedView() {
     const [selectedVoteYear, setSelectedVoteYear] = useState('All');
     // --- End Vote Year Filter State ---
 
+    // --- Add State for Vote Type Filter ---
+    const [selectedVoteType, setSelectedVoteType] = useState('All'); // New state for type filter
+    // --- End Vote Type Filter State ---
+
     // --- Add State for Bill/Keyword Filter ---
     // Local state for immediate input value
     const [localFilterBillNumber, setLocalFilterBillNumber] = useState('');
@@ -896,10 +900,19 @@ function AdvancedView() {
     // --- Filtering Logic (moved outside render function) ---
     const filteredVotes = useMemo(() => {
         // Ensure this depends on the DEBOUNCED values
-        console.log(`[VOTE_FILTER] START: Filtering votes. Year: ${selectedVoteYear}, Bill: ${filterBillNumber}, Keyword: ${filterKeyword}`); // DEBUG
+        console.log(`[VOTE_FILTER] START: Filtering votes. Year: ${selectedVoteYear}, Type: ${selectedVoteType}, Bill: ${filterBillNumber}, Keyword: ${filterKeyword}`); // DEBUG
         const startTime = performance.now(); // Start timing
         
         let votesToFilter = voteHistory;
+        
+        // DEBUG: Log all unique vote types present in the data for troubleshooting
+        if (selectedVoteType !== 'All') {
+            const uniqueTypes = new Set();
+            votesToFilter.forEach(vote => {
+                if (vote && vote.type) uniqueTypes.add(vote.type);
+            });
+            console.log('[VOTE_TYPE_DEBUG] Unique vote types in data:', Array.from(uniqueTypes));
+        }
 
         // Filter by Year (assuming date parsing is robust or handled separately)
         if (selectedVoteYear !== 'All') {
@@ -914,6 +927,74 @@ function AdvancedView() {
                     return false;
                 }
             });
+        }
+
+        // Filter by Vote Type (Enhanced with better logging)
+        if (selectedVoteType !== 'All') {
+            console.log(`[VOTE_TYPE_FILTER] Starting with ${votesToFilter.length} votes, filtering for type: "${selectedVoteType}"`);
+            
+            // Log the first 10 vote categories and types to see what we're working with
+            votesToFilter.slice(0, 10).forEach((vote, i) => {
+                console.log(`[VOTE_TYPE_DEBUG] Vote #${i} category: "${vote?.category || 'undefined'}", type: "${vote?.type || 'undefined'}"`);
+            });
+            
+            // DEBUG: Log all unique vote categories present in the data for troubleshooting
+            const uniqueCategories = new Set();
+            votesToFilter.forEach(vote => {
+                if (vote && vote.category) uniqueCategories.add(vote.category);
+            });
+            console.log('[VOTE_TYPE_DEBUG] Unique vote categories in data:', Array.from(uniqueCategories));
+            
+            // Helper function for normalized string comparison
+            const normalizeString = (str) => {
+                if (!str) return '';
+                return str.toLowerCase()
+                    .replace(/\s+/g, ' ')  // Normalize spaces
+                    .trim();               // Remove leading/trailing spaces
+            };
+            
+            // Get normalized version of selected filter
+            const normalizedFilter = normalizeString(selectedVoteType);
+            console.log(`[VOTE_TYPE_DEBUG] Normalized filter: "${normalizedFilter}"`);
+            
+            // Enhanced filtering with more logging
+            let matchCount = 0;
+            const filteredResult = votesToFilter.filter((vote, index) => {
+                if (!vote) return false;
+                
+                // Get the category value (the field we want to filter on)
+                const voteCategory = vote.category || '';
+                const normalizedCategory = normalizeString(voteCategory);
+                
+                // Try various matching strategies
+                let match = false;
+                
+                // 1. Exact category match (main filter approach)
+                if (normalizedCategory === normalizedFilter) {
+                    match = true;
+                    console.log(`[VOTE_TYPE_DEBUG] EXACT CATEGORY MATCH for "${voteCategory}"`);
+                }
+                // 2. Partial match if needed for fuzzy matching
+                else if (normalizedCategory.includes(normalizedFilter) || normalizedFilter.includes(normalizedCategory)) {
+                    match = true;
+                    console.log(`[VOTE_TYPE_DEBUG] PARTIAL CATEGORY MATCH between "${voteCategory}" and "${selectedVoteType}"`);
+                }
+                // 3. Special case handling
+                else if (normalizedFilter === 'bills/resolutions') {
+                    match = ['passage', 'passage-suspension', 'legislation'].includes(normalizedCategory);
+                }
+                
+                // Detailed logging for first 10 items regardless of match
+                if (index < 10) {
+                    console.log(`[VOTE_TYPE_DEBUG] #${index}: Category="${voteCategory}" | Filter="${selectedVoteType}" | Match=${match}`);
+                }
+                
+                if (match) matchCount++;
+                return match;
+            });
+            
+            console.log(`[VOTE_TYPE_FILTER] Found ${matchCount} matching votes of type "${selectedVoteType}"`);
+            votesToFilter = filteredResult;
         }
 
         // Filter by Bill Number (using DEBOUNCED value)
@@ -945,7 +1026,7 @@ function AdvancedView() {
         const endTime = performance.now(); // End timing
         console.log(`[VOTE_FILTER] END: Filtering took ${(endTime - startTime).toFixed(2)}ms. Found ${votesToFilter.length} votes.`);
         return votesToFilter;
-    }, [voteHistory, selectedVoteYear, filterBillNumber, filterKeyword]); // DEPENDS ON DEBOUNCED VALUES
+    }, [voteHistory, selectedVoteYear, selectedVoteType, filterBillNumber, filterKeyword]); // ADD selectedVoteType to dependencies
     // --- End Filtering Logic ---
 
     // --- Add useEffect to Fetch Vote History ---
@@ -1039,8 +1120,10 @@ function AdvancedView() {
                     <div className="vote-details mb-1">
                         <span className="vote-date">{new Date(vote.date).toLocaleDateString()}</span>
                         <span className="vote-chamber mx-1">({vote.chamber || 'Chamber N/A'})</span>
+                        {/* Display Vote Type */}
+                        {vote.type && <Badge bg="secondary" pill className="ms-1 vote-type-badge">{vote.type}</Badge>} 
                         {vote.bill_number && (
-                            <span className="vote-bill">
+                            <span className="vote-bill ms-1">
                                 {vote.bill_type?.toUpperCase() || ''} {vote.bill_number}
                             </span>
                         )}
@@ -1070,7 +1153,8 @@ function AdvancedView() {
             <div className="vote-history-section">
                 {/* Filter Row - Always visible */}
                 <Row className="mb-3 align-items-end vote-filter-row justify-content-start">
-                    <Col md={3}>
+                    {/* Year Filter */}
+                    <Col xs={6} md={2} className="mb-2 mb-md-0"> 
                         <Form.Group controlId="voteYearFilter">
                             <Form.Label>Year</Form.Label>
                             <Form.Select 
@@ -1085,7 +1169,31 @@ function AdvancedView() {
                             </Form.Select>
                         </Form.Group>
                     </Col>
-                    <Col md={3}>
+                    {/* Vote Type Filter (New) */}
+                    <Col xs={6} md={2} className="mb-2 mb-md-0">
+                        <Form.Group controlId="voteTypeFilter">
+                            <Form.Label>Type</Form.Label>
+                            <Form.Select 
+                                value={selectedVoteType}
+                                onChange={(e) => setSelectedVoteType(e.target.value)}
+                                aria-label="Filter votes by type"
+                            >
+                                <option value="All">All Types</option>
+                                <option value="nomination">Nominations</option>
+                                <option value="passage">Bill Passage</option>
+                                <option value="passage-suspension">Suspension</option>
+                                <option value="cloture">Cloture</option>
+                                <option value="amendment">Amendments</option>
+                                <option value="impeachment">Impeachment</option>
+                                <option value="procedural">Procedural</option>
+                                <option value="treaty">Treaties</option>
+                                <option value="veto-override">Veto Override</option>
+                                <option value="miscellaneous">Miscellaneous</option>
+                            </Form.Select>
+                        </Form.Group>
+                    </Col>
+                    {/* Bill Filter */}
+                    <Col xs={12} md={3} className="mb-2 mb-md-0">
                         <Form.Group controlId="voteBillFilter">
                             <Form.Label>Bill Number</Form.Label>
                             <Form.Control 
@@ -1100,7 +1208,8 @@ function AdvancedView() {
                             />
                         </Form.Group>
                     </Col>
-                    <Col md={4}>
+                    {/* Keyword Filter */}
+                    <Col xs={12} md={3} className="mb-2 mb-md-0">
                         <Form.Group controlId="voteKeywordFilter">
                             <Form.Label>Keyword Search</Form.Label>
                             <Form.Control
@@ -1115,11 +1224,13 @@ function AdvancedView() {
                             />
                         </Form.Group>
                     </Col>
-                    <Col md={2} className="d-flex align-items-end">
+                    {/* Clear Button */}
+                    <Col xs={12} md={2} className="d-flex align-items-end">
                         <Button 
                             variant="secondary" 
                             onClick={() => {
                                 setSelectedVoteYear('All');
+                                setSelectedVoteType('All'); // Reset type filter
                                 setLocalFilterBillNumber('');
                                 setLocalFilterKeyword('');
                             }}
