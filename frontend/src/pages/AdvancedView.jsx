@@ -6,6 +6,50 @@ import { useSelector } from 'react-redux';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+// Simple Error Boundary Component
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null, errorInfo: null };
+    }
+
+    static getDerivedStateFromError(error) {
+        // Update state so the next render will show the fallback UI.
+        return { hasError: true };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        // You can also log the error to an error reporting service
+        console.error("ErrorBoundary caught an error:", error, errorInfo);
+        this.setState({ error: error, errorInfo: errorInfo });
+    }
+
+    render() {
+        if (this.state.hasError) {
+            // You can render any custom fallback UI
+            return (
+                <Alert variant="danger">
+                    <Alert.Heading>Something went wrong while rendering the vote history.</Alert.Heading>
+                    <p>
+                        There was an issue displaying the votes. Please try refreshing or clearing the filters.
+                    </p>
+                    {/* Optionally display error details for debugging */}
+                    {/* 
+                    <hr />
+                    <p className="mb-0">
+                        {this.state.error && this.state.error.toString()}
+                        <br />
+                        {this.state.errorInfo && this.state.errorInfo.componentStack}
+                    </p>
+                    */}
+                </Alert>
+            );
+        }
+
+        return this.props.children; 
+    }
+}
+
 function AdvancedView() {
     const [member, setMember] = useState(null);
     const [loading, setLoading] = useState(false); // Start false, set true during fetch
@@ -265,7 +309,7 @@ function AdvancedView() {
         setError('');
         setMember(null); // Clear previous member data
         setSearchResults([]); // Clear search results when loading specific member
-        console.log(`Attempting to load member by ID: ${id}`);
+        console.log(`[loadMemberById] Attempting to load member by ID: ${id}`);
         
         // Scroll to top of the page
         window.scrollTo(0, 0);
@@ -283,7 +327,8 @@ function AdvancedView() {
              if (!data) {
                 throw new Error("Received empty data for member.");
             }
-            console.log("Member data fetched by ID:", data);
+            console.log("[loadMemberById] Member data fetched by ID:", data);
+            console.log("[loadMemberById] state_rank from fetched data:", data?.state_rank);
             setMember(data);
         } catch (err) {
             console.error(`Failed to fetch member ${id}:`, err);
@@ -347,15 +392,32 @@ function AdvancedView() {
         }
     }, []);
 
-    // Load member data when memberId changes
+    // Load member data when memberId changes or via location state
     useEffect(() => {
         console.log("AdvancedView mounting or dependencies changed.");
         loadStates(); // Load states on component mount
 
         // Prioritize member data passed via location state
         if (location.state?.member) {
-            console.log("Member data found in location state:", location.state.member);
-            setMember(location.state.member);
+            let memberDataFromState = { ...location.state.member }; // Clone to modify
+            console.log("[Effect] Member data found in location state:", memberDataFromState);
+
+            // Check if member_type is missing and try to infer it
+            if (!memberDataFromState.member_type) {
+                console.warn("[Effect] member_type missing in location state. Attempting to infer...");
+                if (memberDataFromState.state_rank) {
+                    memberDataFromState.member_type = 'sen'; // Infer Senator
+                    console.log("[Effect] Inferred member_type: sen (due to state_rank)");
+                } else if (memberDataFromState.district) {
+                    memberDataFromState.member_type = 'rep'; // Infer Representative
+                    console.log("[Effect] Inferred member_type: rep (due to district)");
+                } else {
+                     console.warn("[Effect] Could not infer member_type from location state data.");
+                }
+            }
+            
+            console.log("[Effect] Final state_rank from location state data:", memberDataFromState?.state_rank);
+            setMember(memberDataFromState); // Use the potentially modified data
             setLoading(false); // Already have data, no loading needed
             setError('');
             setSearchResults([]); // Clear search results if showing direct member profile
@@ -363,16 +425,23 @@ function AdvancedView() {
         }
         // If no location state, check URL parameters for memberId
         else if (memberId) {
-            console.log(`Member ID found in URL: ${memberId}. Fetching...`);
+            console.log(`[Effect] Member ID found in URL: ${memberId}. Fetching via loadMemberById...`);
+            // Ensure previous state is cleared before loading
+            setMember(null);
+            setError('');
+            setSearchResults([]);
             loadMemberById(memberId);
         }
         // Otherwise, load all members and show them in search results
         else {
-            console.log("No specific member requested. Loading all members.");
+            console.log("[Effect] No specific member requested. Loading all members.");
             setMember(null);
+            setSearchResults([]); // Clear any previous search results
+            setLoading(false);
             loadAllMembers();
         }
-    }, [location.state, memberId, loadStates, loadMemberById, loadAllMembers]); 
+        
+    }, [location.state, memberId, loadStates, loadMemberById, loadAllMembers]);
     
     // Add a new effect specifically for scrolling to top when member changes
     useEffect(() => {
@@ -380,6 +449,26 @@ function AdvancedView() {
             window.scrollTo(0, 0);
         }
     }, [member]);
+
+    // Effect to ensure complete member data when navigated via state
+    useEffect(() => {
+        // Only run if we have a member object but didn't load via URL memberId initially
+        if (member && !memberId) {
+            const isSenator = member.member_type === 'sen' || member.member_type === 'senator';
+            const isRep = member.member_type === 'rep' || member.member_type === 'representative';
+            const missingSenatorRank = isSenator && !member.state_rank;
+            const missingRepDistrict = isRep && !member.district;
+
+            // If essential data seems missing and we likely got member from location.state
+            if (missingSenatorRank || missingRepDistrict) {
+                console.log("[Refetch Check] Incomplete data detected from location.state. Refetching full profile.");
+                const idToFetch = member.congress_id || member.bioguide_id;
+                if (idToFetch) {
+                    loadMemberById(idToFetch);
+                }
+            }
+        }
+    }, [member, memberId, loadMemberById]); // Depend on member, memberId, and the fetch function
 
     const handleSearchChange = (event) => {
         const { name, value } = event.target;
@@ -716,7 +805,15 @@ function AdvancedView() {
                                     <div className="d-flex flex-column">
                                         <strong>{res.name}</strong>
                                         <span>
-                                            {res.party} - {res.state} {res.district ? `(District ${res.district})` : '(Senator)'}
+                                            {res.party} - {res.state}
+                                            {/* Explicit check for Rep type */}
+                                            {(res.member_type === 'rep' || res.member_type === 'representative') && res.district && (
+                                                ` - District ${res.district}`
+                                            )}
+                                            {/* Explicit check for Sen type and state_rank */}
+                                            {(res.member_type === 'sen' || res.member_type === 'senator') && res.state_rank && (
+                                                ` - ${res.state_rank.charAt(0).toUpperCase() + res.state_rank.slice(1)} Senator`
+                                            )}
                                         </span>
                                     </div>
                                 </Col>
@@ -791,41 +888,45 @@ function AdvancedView() {
         // console.log(`[VOTE_FILTER] Filtering votes. Year: ${selectedVoteYear}, Bill: ${filterBillNumber}, Keyword: ${filterKeyword}`); // DEBUG
         let votesToFilter = voteHistory;
 
-        // Filter by Year
+        // Filter by Year (assuming date parsing is robust or handled separately)
         if (selectedVoteYear !== 'All') {
             const targetYear = parseInt(selectedVoteYear);
             votesToFilter = votesToFilter.filter(vote => {
-                if (!vote.date) return false;
+                if (!vote || !vote.date) return false;
                 try {
                     const voteYear = new Date(vote.date).getFullYear();
-                    const match = voteYear === targetYear;
-                    // if (!match && voteYear > 2006) { // Add more specific logging if needed
-                    //    console.log(`[VOTE_FILTER_MISMATCH] Vote Year: ${voteYear}, Target Year: ${targetYear}, Date: ${vote.date}`);
-                    // }
-                    return match;
+                    return !isNaN(voteYear) && voteYear === targetYear;
                 } catch (e) {
-                    console.error("Error parsing date for filtering:", vote.date, e);
+                    console.error("Error parsing date for year filtering:", vote.date, e);
                     return false;
                 }
             });
         }
 
-        // Filter by Bill Number (case-insensitive, partial match)
+        // Filter by Bill Number (more defensive checks)
         if (filterBillNumber.trim()) {
             const lowerFilterBill = filterBillNumber.trim().toLowerCase();
-            votesToFilter = votesToFilter.filter(vote => 
-                (vote.bill_number && vote.bill_number.toLowerCase().includes(lowerFilterBill)) ||
-                (vote.bill_type && vote.bill_type.toLowerCase().includes(lowerFilterBill)) // Also check type (e.g., HR, S)
-            );
+            votesToFilter = votesToFilter.filter(vote => {
+                if (!vote) return false;
+                // Check if bill_number exists and is a string before calling includes
+                const billNumberMatch = typeof vote.bill_number === 'string' && vote.bill_number.toLowerCase().includes(lowerFilterBill);
+                // Check if bill_type exists and is a string before calling includes
+                const billTypeMatch = typeof vote.bill_type === 'string' && vote.bill_type.toLowerCase().includes(lowerFilterBill);
+                return billNumberMatch || billTypeMatch;
+            });
         }
 
-        // Filter by Keyword (case-insensitive, partial match in question or description)
+        // Filter by Keyword (more defensive checks)
         if (filterKeyword.trim()) {
             const lowerFilterKeyword = filterKeyword.trim().toLowerCase();
-            votesToFilter = votesToFilter.filter(vote => 
-                (vote.question && vote.question.toLowerCase().includes(lowerFilterKeyword)) ||
-                (vote.description && vote.description.toLowerCase().includes(lowerFilterKeyword))
-            );
+            votesToFilter = votesToFilter.filter(vote => {
+                if (!vote) return false;
+                // Check if question exists and is a string before calling includes
+                const questionMatch = typeof vote.question === 'string' && vote.question.toLowerCase().includes(lowerFilterKeyword);
+                // Check if description exists and is a string before calling includes
+                const descriptionMatch = typeof vote.description === 'string' && vote.description.toLowerCase().includes(lowerFilterKeyword);
+                return questionMatch || descriptionMatch;
+            });
         }
         
         // console.log(`[VOTE_FILTER] Filtered votes count after all filters: ${votesToFilter.length}`); // DEBUG
@@ -936,8 +1037,20 @@ function AdvancedView() {
                                 type="text"
                                 placeholder="Bill (e.g., HR 22)"
                                 value={filterBillNumber}
-                                onChange={(e) => setFilterBillNumber(e.target.value)}
+                                onChange={(e) => {
+                                    try {
+                                        // Safely set the bill number
+                                        setFilterBillNumber(e.target.value || '');
+                                    } catch (error) {
+                                        console.error("Error updating bill filter:", error);
+                                        // Reset to empty if there's an error
+                                        setFilterBillNumber('');
+                                    }
+                                }}
                                 aria-label="Filter votes by bill number"
+                                name="billFilter"
+                                autoComplete="off"
+                                role="searchbox"
                             />
                         </Form.Group>
                     </Col>
@@ -948,8 +1061,20 @@ function AdvancedView() {
                                 type="text"
                                 placeholder="Keyword (in question/desc)"
                                 value={filterKeyword}
-                                onChange={(e) => setFilterKeyword(e.target.value)}
+                                onChange={(e) => {
+                                    try {
+                                        // Safely set the keyword
+                                        setFilterKeyword(e.target.value || '');
+                                    } catch (error) {
+                                        console.error("Error updating keyword filter:", error);
+                                        // Reset to empty if there's an error
+                                        setFilterKeyword('');
+                                    }
+                                }}
                                 aria-label="Filter votes by keyword"
+                                name="keywordFilter"
+                                autoComplete="off"
+                                role="searchbox"
                             />
                         </Form.Group>
                     </Col>
@@ -1051,6 +1176,12 @@ function AdvancedView() {
 
         uniqueSubcommittees.sort((a, b) => getRolePriority(a.role) - getRolePriority(b.role));
 
+        // Log member details right before rendering the card header
+        console.log("[renderMemberProfile] Rendering card header. Member data:", member);
+        console.log("[renderMemberProfile] member.member_type:", member?.member_type);
+        console.log("[renderMemberProfile] member.state_rank:", member?.state_rank);
+        console.log("[renderMemberProfile] member.district:", member?.district);
+
         return (
             <Card className={`member-profile-card ${partyClass}`}>
                 <Card.Header className="profile-header">
@@ -1063,8 +1194,14 @@ function AdvancedView() {
                                 </Badge>
                                 <span className="text-white opacity-90" style={{ fontSize: '0.95rem' }}>
                                     {member.state}
-                                    {(member.member_type === 'rep' || member.member_type === 'representative') && member.district && ` - District ${member.district}`}
-                                    {(member.member_type === 'sen' || member.member_type === 'senator') && member.state_rank && ` - ${member.state_rank.charAt(0).toUpperCase() + member.state_rank.slice(1)} Senator`}
+                                    {/* Explicit check for Rep type */}
+                                    {(member.member_type === 'rep' || member.member_type === 'representative') && member.district && (
+                                        ` - District ${member.district}`
+                                    )}
+                                    {/* Explicit check for Sen type and state_rank */}
+                                    {(member.member_type === 'sen' || member.member_type === 'senator') && member.state_rank && (
+                                        ` - ${member.state_rank.charAt(0).toUpperCase() + member.state_rank.slice(1)} Senator`
+                                    )}
                                 </span>
                             </div>
                         </Col>
@@ -1205,7 +1342,9 @@ function AdvancedView() {
                     {/* --- Vote History Row (Full Width) --- */}
                     <Row className="mt-3"> 
                         <Col xs={12}>
-                             {renderVoteHistory()} 
+                            <ErrorBoundary>
+                                {renderVoteHistory()} 
+                            </ErrorBoundary>
                         </Col>
                     </Row>
                     
