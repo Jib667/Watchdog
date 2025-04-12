@@ -895,40 +895,6 @@ function AdvancedView() {
 
     // --- Helper Function to Render Vote History ---
     const renderVoteHistory = () => {
-        // console.log(`[VOTE_RENDER] Rendering votes. Selected year: ${selectedVoteYear}`); // DEBUG (No longer needed here)
-        // --- Filtering Logic MOVED OUTSIDE ---
-        // const filteredVotes = useMemo(() => { ... }, [voteHistory, selectedVoteYear]); // MOVED
-
-        if (loadingVotes) {
-            return (
-                <div className="text-center my-3">
-                    <Spinner animation="border" size="sm" />
-                    <p className="mt-1 small text-white-50">Loading Votes...</p>
-                </div>
-            );
-        }
-
-        // Show error message *before* checking filteredVotes length
-        if (voteError && voteHistory.length === 0) {
-            // Only show the main fetch error if we actually have no votes at all
-            return <p className="text-center text-warning small mt-3">{voteError}</p>;
-        }
-
-        // Handle case where votes exist but none match the selected year filter
-        if (!loadingVotes && voteHistory.length > 0 && filteredVotes.length === 0) {
-            return <p className="text-center text-white-50 small mt-3">No votes found for the year {selectedVoteYear}.</p>;
-        }
-
-        // If there was no initial fetch error, but the voteHistory array is empty, show the voteError message (e.g., "No vote history found")
-        if (!loadingVotes && voteHistory.length === 0 && voteError) {
-             return <p className="text-center text-warning small mt-3">{voteError}</p>;
-        }
-
-        // If loading is done, no error, and the original history is empty, return null quietly (should be caught by voteError usually)
-        if (!loadingVotes && voteHistory.length === 0 && !voteError) {
-             return null;
-        }
-
         // Helper to format vote position with styling
         const formatVotePosition = (position) => {
             if (!position) return <span className="vote-position vote-other">N/A</span>;
@@ -945,53 +911,41 @@ function AdvancedView() {
         };
 
         return (
-            <div className="vote-history-section">
-                {/* --- Title & Filter Row --- */}
-                <Row className="mb-3 justify-content-center align-items-center"> {/* Center title and filters */}
-                    {/* Title */}
-                    <Col xs={12} md="auto" className="mb-2 mb-md-0">
-                        <h5 className="text-white section-title mb-0">Vote History</h5>
+            <div className="vote-history-section"> 
+                {/* Filter Row - Always visible */}
+                <Row className="mb-3 align-items-end vote-filter-row justify-content-start"> 
+                    <Col md={3}>
+                        <Form.Group controlId="voteYearFilter">
+                            <Form.Label>Year</Form.Label>
+                            <Form.Select 
+                                value={selectedVoteYear}
+                                onChange={(e) => setSelectedVoteYear(e.target.value)}
+                                aria-label="Filter votes by year"
+                            >
+                                <option value="All">All Years</option>
+                                {availableVoteYears.map(year => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
                     </Col>
-                    {/* Year Filter */}
-                    <Col xs={6} sm={4} md={2} className="mb-2 mb-md-0">
-                        {availableVoteYears.length > 0 && (
-                            <Form.Group controlId="voteYearFilter">
-                                <Form.Label visuallyHidden>Filter by Year</Form.Label>
-                                <Form.Select 
-                                    size="sm" 
-                                    value={selectedVoteYear} 
-                                    onChange={(e) => setSelectedVoteYear(e.target.value)}
-                                    aria-label="Filter votes by year"
-                                >
-                                    <option value="All">All Years</option>
-                                    {availableVoteYears.map(year => (
-                                        <option key={year} value={year}>{year}</option>
-                                    ))}
-                                </Form.Select>
-                            </Form.Group>
-                        )}
-                    </Col>
-                     {/* Bill Filter */}
-                    <Col xs={6} sm={4} md={3} className="mb-2 mb-md-0">
+                    <Col md={3}>
                         <Form.Group controlId="voteBillFilter">
-                            <Form.Label visuallyHidden>Filter by Bill Number</Form.Label>
+                            <Form.Label>Bill Number</Form.Label>
                             <Form.Control 
-                                type="text" 
-                                size="sm" 
+                                type="text"
                                 placeholder="Bill (e.g., HR 22)"
                                 value={filterBillNumber}
                                 onChange={(e) => setFilterBillNumber(e.target.value)}
                                 aria-label="Filter votes by bill number"
                             />
-                         </Form.Group>
+                        </Form.Group>
                     </Col>
-                    {/* Keyword Filter */}
-                    <Col xs={12} sm={4} md={4} className="mb-2 mb-md-0">
-                         <Form.Group controlId="voteKeywordFilter">
-                            <Form.Label visuallyHidden>Filter by Keyword</Form.Label>
-                            <Form.Control 
-                                type="text" 
-                                size="sm" 
+                    <Col md={4}>
+                        <Form.Group controlId="voteKeywordFilter">
+                            <Form.Label>Keyword Search</Form.Label>
+                            <Form.Control
+                                type="text"
                                 placeholder="Keyword (in question/desc)"
                                 value={filterKeyword}
                                 onChange={(e) => setFilterKeyword(e.target.value)}
@@ -999,40 +953,66 @@ function AdvancedView() {
                             />
                         </Form.Group>
                     </Col>
+                    <Col md={2} className="d-flex align-items-end">
+                        <Button 
+                            variant="secondary" 
+                            onClick={() => {
+                                setSelectedVoteYear('All');
+                                setFilterBillNumber('');
+                                setFilterKeyword('');
+                            }}
+                            className="w-100"
+                            aria-label="Clear vote filters"
+                        >
+                            Clear
+                        </Button>
+                    </Col>
                 </Row>
-                {/* --- End Filter Row --- */}
                 
+                {/* Container always visible */}
                 <div className="vote-scroll-container">
-                    <ListGroup variant="flush" className="vote-list">
-                        {filteredVotes.map((vote, index) => (
-                            <ListGroup.Item key={vote.vote_id || `vote-${index}`} className="vote-item bg-transparent border-secondary text-white">
-                                <div className="vote-details mb-1">
-                                    <span className="vote-date">{new Date(vote.date).toLocaleDateString()}</span>
-                                    <span className="vote-chamber mx-1">({vote.chamber || 'Chamber N/A'})</span>
-                                    {vote.bill_number && (
-                                        <span className="vote-bill">
-                                            {vote.bill_type?.toUpperCase() || ''} {vote.bill_number}
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="vote-question mb-1">{vote.question}</div>
-                                {vote.description && (
-                                    <div className="vote-description text-white-50 mb-2">{vote.description}</div>
-                                )}
-                                <div className="vote-member-action">
-                                    <strong>Vote:</strong> {formatVotePosition(vote.member_vote_position)}
-                                    <span className="vote-result ms-2 text-white-50">({vote.result || 'Result N/A'})</span>
-                                </div>
-                                {vote.source_url && (
-                                    <div className="vote-source mt-1">
-                                        <a href={vote.source_url} target="_blank" rel="noopener noreferrer" className="small text-info">
-                                            View Source
-                                        </a>
+                    {/* Loading state INSIDE container */}
+                    {loadingVotes ? (
+                        <div className="text-center my-5">
+                            <Spinner animation="border" size="sm" />
+                            <p className="mt-1 small text-white-50">Loading Votes...</p>
+                        </div>
+                    ) : voteError && voteHistory.length === 0 ? (
+                        <p className="text-center text-warning small mt-3">{voteError}</p>
+                    ) : voteHistory.length > 0 && filteredVotes.length === 0 ? (
+                        <p className="text-center text-white-50 small mt-3">No votes found for the year {selectedVoteYear}.</p>
+                    ) : (
+                        <ListGroup variant="flush" className="vote-list">
+                            {filteredVotes.map((vote, index) => (
+                                <ListGroup.Item key={vote.vote_id || `vote-${index}`} className="vote-item bg-transparent border-secondary text-white">
+                                    <div className="vote-details mb-1">
+                                        <span className="vote-date">{new Date(vote.date).toLocaleDateString()}</span>
+                                        <span className="vote-chamber mx-1">({vote.chamber || 'Chamber N/A'})</span>
+                                        {vote.bill_number && (
+                                            <span className="vote-bill">
+                                                {vote.bill_type?.toUpperCase() || ''} {vote.bill_number}
+                                            </span>
+                                        )}
                                     </div>
-                                )}
-                            </ListGroup.Item>
-                        ))}
-                    </ListGroup>
+                                    <div className="vote-question mb-1">{vote.question}</div>
+                                    {vote.description && (
+                                        <div className="vote-description text-white-50 mb-2">{vote.description}</div>
+                                    )}
+                                    <div className="vote-member-action">
+                                        <strong>Vote:</strong> {formatVotePosition(vote.member_vote_position)}
+                                        <span className="vote-result ms-2 text-white-50">({vote.result || 'Result N/A'})</span>
+                                    </div>
+                                    {vote.source_url && (
+                                        <div className="vote-source mt-1">
+                                            <a href={vote.source_url} target="_blank" rel="noopener noreferrer" className="small text-info">
+                                                View Source
+                                            </a>
+                                        </div>
+                                    )}
+                                </ListGroup.Item>
+                            ))}
+                        </ListGroup>
+                    )}
                 </div>
             </div>
         );
@@ -1118,104 +1098,108 @@ function AdvancedView() {
                             </div>
                         </Col>
                         
-                        {/* === Middle Column: General Information === */}
-                        <Col md={4} className="mb-4 mb-md-0 d-flex flex-column">
-                            <div className="flex-grow-1">
-                            <h4 className="mb-3 text-white section-title">General Information</h4>
-                            <ListGroup variant="flush">
-                                {(member.term_start || member.term_end) && (
-                                    <ListGroup.Item className="border-0 mb-2 rounded info-item">
-                                        <span className="info-label">Current Term</span>
-                                        <span className="info-value">{member.term_start || '?'} to {member.term_end || '?'}</span>
-                                    </ListGroup.Item>
-                                )}
-                                {member.office_address && (
-                                    <ListGroup.Item className="border-0 mb-2 rounded info-item">
-                                        <span className="info-label">Office</span>
-                                        <span className="info-value">{member.office_address}</span>
-                                    </ListGroup.Item>
-                                )}
-                                {member.phone && (
-                                    <ListGroup.Item className="border-0 mb-2 rounded info-item">
-                                        <span className="info-label">Phone</span>
-                                        <span className="info-value">
-                                            <a href={`tel:${member.phone}`} className="text-white">{member.phone}</a>
-                                        </span>
-                                    </ListGroup.Item>
-                                )}
-                                {member.website && (
-                                    <ListGroup.Item className="border-0 mb-2 rounded info-item">
-                                        <span className="info-label">Website</span>
-                                        <span className="info-value">
-                                            <a href={member.website} target="_blank" rel="noopener noreferrer" className="text-white">{member.website}</a>
-                                        </span>
-                                    </ListGroup.Item>
-                                )}
-                                <ListGroup.Item className="border-0 mb-2 rounded info-item">
-                                    <span className="info-label">Contact Form</span>
-                                    <span className="info-value">
-                                        {member.contact_form ? (
-                                            <a href={member.contact_form} target="_blank" rel="noopener noreferrer" className="text-white">Official Contact Form</a>
-                                        ) : (
-                                                <span></span> 
-                                        )}
-                                    </span>
-                                </ListGroup.Item>
-                                {member.bioguide_id && (
-                                    <ListGroup.Item className="border-0 mb-2 rounded info-item">
-                                        <span className="info-label">BioGuide ID</span>
-                                        <span className="info-value">{member.bioguide_id}</span>
-                                    </ListGroup.Item>
-                                )}
-                            </ListGroup>
-                            </div>
-                        </Col>
-                        
-                        {/* === Right Column: Committee Assignments (Restored) === */}
-                        <Col md={4} className="d-flex flex-column">
-                            <div className="flex-grow-1">
-                                {/* Committee Assignments Section */}
-                            {uniqueSubcommittees && uniqueSubcommittees.length > 0 ? (
-                                    <div className="committee-section mb-4">
-                                        <h5 className="mb-3 text-white section-title">Committee Assignments</h5>
-                                    <div className="committee-scroll-container"> 
-                                        <ListGroup className="committee-assignments-list">
-                                            {uniqueSubcommittees.map((committee, index) => (
-                                                <ListGroup.Item 
-                                                    key={`${committee.committee_id}-${index}`}
-                                                    className="bg-transparent text-white border-secondary committee-item-profile"
-                                                >
-                                                    <div className="d-flex justify-content-between align-items-center">
-                                                        <div>
-                                                            <strong>{committee.name}</strong>
-                                                            {committee.is_subcommittee && (
-                                                                <div className="text-muted small">
-                                                                    {committee.parent_committee}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        {committee.role && committee.role !== 'Member' && (
-                                                            <Badge 
-                                                                bg={committee.role === 'Chairman' ? 'primary' : 
-                                                                    committee.role === 'Ranking Member' ? 'info' : 'secondary'}
-                                                                className="ms-2"
-                                                            >
-                                                                {committee.role}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </ListGroup.Item>
-                                            ))}
-                                        </ListGroup>
-                                    </div>
-                                    </div> 
-                            ) : (
-                                    <div className="text-center text-white-50 my-4">
-                                    No current committee assignments found.
-                                </div>
-                            )}
-                            </div>
-                        </Col>
+                        {/* === Right Column: Contains Info and Committees === */}
+                        <Col md={8}>
+                           <Row className="h-100"> {/* Nested row */}
+                               {/* === Nested Left: General Information === */}
+                               <Col md={6} className="mb-4 mb-md-0 d-flex flex-column">
+                                   <div className="flex-grow-1 general-info-section"> {/* Added class */}
+                                       <h4 className="mb-3 text-white section-title">General Information</h4>
+                                       <ListGroup variant="flush">
+                                           {(member.term_start || member.term_end) && (
+                                               <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                                   <span className="info-label">Current Term</span>
+                                                   <span className="info-value">{member.term_start || '?'} to {member.term_end || '?'}</span>
+                                               </ListGroup.Item>
+                                           )}
+                                           {member.office_address && (
+                                               <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                                   <span className="info-label">Office</span>
+                                                   <span className="info-value">{member.office_address}</span>
+                                               </ListGroup.Item>
+                                           )}
+                                           {member.phone && (
+                                               <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                                   <span className="info-label">Phone</span>
+                                                   <span className="info-value">
+                                                       <a href={`tel:${member.phone}`} className="text-white">{member.phone}</a>
+                                                   </span>
+                                               </ListGroup.Item>
+                                           )}
+                                           {member.website && (
+                                               <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                                   <span className="info-label">Website</span>
+                                                   <span className="info-value">
+                                                       <a href={member.website} target="_blank" rel="noopener noreferrer" className="text-white">{member.website}</a>
+                                                   </span>
+                                               </ListGroup.Item>
+                                           )}
+                                           <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                               <span className="info-label">Contact Form</span>
+                                               <span className="info-value">
+                                                   {member.contact_form ? (
+                                                       <a href={member.contact_form} target="_blank" rel="noopener noreferrer" className="text-white">Official Contact Form</a>
+                                                   ) : (
+                                                           <span></span> 
+                                                   )}
+                                               </span>
+                                           </ListGroup.Item>
+                                           {member.bioguide_id && (
+                                               <ListGroup.Item className="border-0 mb-2 rounded info-item">
+                                                   <span className="info-label">BioGuide ID</span>
+                                                   <span className="info-value">{member.bioguide_id}</span>
+                                               </ListGroup.Item>
+                                           )}
+                                       </ListGroup>
+                                   </div>
+                               </Col>
+                               
+                               {/* === Nested Right: Committee Assignments === */}
+                               <Col md={6} className="d-flex flex-column">
+                                   <div className="flex-grow-1 committee-section"> {/* Use existing class or make new one */}
+                                       {uniqueSubcommittees && uniqueSubcommittees.length > 0 ? (
+                                           <>
+                                               <h5 className="mb-3 text-white section-title">Committee Assignments</h5>
+                                               <div className="committee-scroll-container"> 
+                                                   <ListGroup className="committee-assignments-list">
+                                                       {uniqueSubcommittees.map((committee, index) => (
+                                                           <ListGroup.Item 
+                                                               key={`${committee.committee_id}-${index}`}
+                                                               className="bg-transparent text-white border-secondary committee-item-profile"
+                                                           >
+                                                               <div className="d-flex justify-content-between align-items-center">
+                                                                   <div>
+                                                                       <strong>{committee.name}</strong>
+                                                                       {committee.is_subcommittee && (
+                                                                           <div className="text-muted small">
+                                                                               {committee.parent_committee}
+                                                                           </div>
+                                                                       )}
+                                                                   </div>
+                                                                   {committee.role && committee.role !== 'Member' && (
+                                                                       <Badge 
+                                                                           bg={committee.role === 'Chairman' ? 'primary' : 
+                                                                               committee.role === 'Ranking Member' ? 'info' : 'secondary'}
+                                                                           className="ms-2"
+                                                                       >
+                                                                           {committee.role}
+                                                                       </Badge>
+                                                                   )}
+                                                               </div>
+                                                           </ListGroup.Item>
+                                                       ))}
+                                                   </ListGroup>
+                                               </div>
+                                           </> 
+                                       ) : (
+                                           <div className="text-center text-white-50 my-4">
+                                               No current committee assignments found.
+                                           </div>
+                                       )}
+                                   </div>
+                               </Col>
+                           </Row> {/* End Nested Row */}
+                        </Col> {/* End Right Column */}
                     </Row>
                     
                     {/* --- Vote History Row (Full Width) --- */}

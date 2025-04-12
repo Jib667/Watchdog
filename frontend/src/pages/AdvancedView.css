@@ -98,42 +98,54 @@
   color: white;
 }
 
-/* Search button styling - Updated to match action-button style */
-.search-section .btn-primary,
-.search-section .btn-secondary {
-  border-radius: 20px;
-  padding: 0.5rem 1.25rem;
-  font-weight: 500;
+/* Search button styling - Apply action-button styles */
+.search-section .btn-primary {
+  border-radius: 2rem; /* pill shape */
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
   transition: all 0.3s ease;
-  border: 1px solid transparent;
-  background-color: #2a6ca9;
-  border-color: #2a6ca9;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Match action-button border */
+  background-color: rgba(255, 255, 255, 0.1); /* Match action-button background */
   color: white;
-  height: 50px; /* Match input height */
-  min-width: 100px; /* Ensure buttons have enough width */
+  height: auto; /* Remove fixed height */
+  min-width: 100px; 
+  display: inline-flex; /* Use flex for centering */
+  align-items: center;
+  justify-content: center;
 }
 
 .search-section .btn-primary:hover,
-.search-section .btn-primary:focus,
-.search-section .btn-secondary:hover,
-.search-section .btn-secondary:focus {
-  background-color: #1e4f7a;
-  border-color: #1e4f7a;
+.search-section .btn-primary:focus {
+  background-color: rgba(255, 255, 255, 0.2); /* Match action-button hover */
+  border-color: rgba(255, 255, 255, 0.2); /* Keep border consistent on hover */
   color: white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   transform: translateY(-2px);
 }
 
-/* Style secondary button differently (e.g., Clear button) */
+/* Style secondary button (Clear) in search section like action-button */
 .search-section .btn-secondary {
-  background-color: #6c757d;
-  border-color: #6c757d;
+  border-radius: 2rem; /* pill shape */
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  background-color: rgba(255, 255, 255, 0.1); /* Match action-button */
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Match action-button */
+  height: auto; /* Remove fixed height */
+  min-width: 100px; 
+  display: inline-flex; /* Use flex for centering */
+  align-items: center;
+  justify-content: center;
 }
 
 .search-section .btn-secondary:hover,
 .search-section .btn-secondary:focus {
-  background-color: #5a6268;
-  border-color: #545b62;
+  background-color: rgba(255, 255, 255, 0.2); /* Match action-button hover */
+  border-color: rgba(255, 255, 255, 0.2); /* Keep border consistent */
+  color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
 }
 
 /* Member Profile Styling */
@@ -632,8 +644,6 @@ img.rounded-circle {
 
 /* Committee section styling */
 .committee-section {
-  margin-top: 2rem;
-  padding: 1.5rem;
   background-color: rgba(30, 58, 95, 0.5);
   border-radius: 0.75rem;
   display: flex;
@@ -669,11 +679,14 @@ img.rounded-circle {
 
 /* Committee section scroll container */
 .committee-scroll-container {
-  overflow-y: auto;
-  flex-grow: 1;
-  min-height: 0;
-  padding-right: 10px; 
-  margin-right: -10px; 
+  max-height: 341px; /* Set maximum height */
+  overflow-y: auto;  /* Enable vertical scroll on overflow */
+  flex-grow: 1;      /* Allow container to grow */
+  min-height: 0;     /* Important for scroll in flex children */
+  padding: 0.5rem;   /* Add some internal padding */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.1); /* Slightly darker background */
 }
 
 /* Style scrollbar (optional, for Webkit browsers) */
@@ -698,11 +711,17 @@ img.rounded-circle {
 /* --- Vote History Styles --- */
 
 .vote-history-section {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  margin-top: 1.5rem;
+  margin-top: 0.0rem; /* Further reduced margin-top to move section up */
 }
+
+/* Adjust title margin (if title were present) */
+/* .vote-history-section .section-title {
+    margin-bottom: 0.5rem; 
+    padding-left: 0; 
+} */
 
 /* --- Vote Filter Row Styles --- */
 .vote-history-section .row {
@@ -745,15 +764,15 @@ img.rounded-circle {
   color: white;
 }
 
+/* Apply container styles ONLY to the scroll container */
 .vote-scroll-container {
     flex-grow: 1;
     overflow-y: auto;
-    max-height: 450px;
-    padding-right: 10px; 
-    margin-right: -10px; 
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
+    max-height: 450px; /* Set maximum height */
+    padding: 0.5rem; /* Add padding */
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Add border */
+    border-radius: 6px; /* Add radius */
+    background-color: rgba(0, 0, 0, 0.1); /* Add background */
 }
 
 /* Style scrollbar (optional, for Webkit browsers) */
@@ -902,4 +921,34 @@ img.rounded-circle {
 
 /* Add overflow hidden to the parent Col for committees if needed - Requires identifying the Col */
 /* This is tricky without adding a specific class to the Col in JSX */
-/* Alternative: Modify JSX to add a class to the committee Col */ 
+/* Alternative: Modify JSX to add a class to the committee Col */
+
+.vote-filter-row .form-select,
+.vote-filter-row .form-control,
+.vote-filter-row .btn {
+    height: 40px; /* Slightly shorter filters */
+    font-size: 0.9rem;
+    border-radius: 2rem; /* Matching other action buttons radius - Use 2rem for pill shape */
+}
+
+/* Apply styling to the clear button (btn-secondary within filter row) */
+.vote-filter-row .btn-secondary {
+    background-color: rgba(255, 255, 255, 0.1); /* Match action-button */
+    color: white; /* Match action-button */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Match action-button */
+    transition: all 0.3s ease; /* Match action-button */
+    font-weight: 600; /* Match action-button */
+    padding: 0.75rem 1.5rem; /* Add padding like action-button */
+    border-radius: 2rem; /* Match pill shape */
+    height: auto; /* Remove fixed height */
+    display: inline-flex; /* Use flex for alignment */
+    align-items: center; /* Vertically center text */
+    justify-content: center; /* Horizontally center text */
+    line-height: 1; /* Ensure line height doesn't interfere */
+}
+
+.vote-filter-row .btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.2); /* Match action-button hover */
+    color: white;
+    transform: translateY(-2px); /* Match action-button hover */
+} 
