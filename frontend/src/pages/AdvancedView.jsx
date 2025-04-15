@@ -1775,6 +1775,7 @@ function AdvancedView() {
                     {/* --- Vote History Row (Full Width) --- */}
                     <Row className="mt-0"> {/* Changed from mt-3 to mt-0 to remove top margin */}
                         <Col xs={12}>
+                            <h4 className="text-white section-title mb-3">Vote History</h4>
                             <ErrorBoundary>
                                 {renderVoteHistory()} 
                             </ErrorBoundary>
