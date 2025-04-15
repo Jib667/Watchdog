@@ -11,8 +11,10 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlite3 import Row, IntegrityError
 from pathlib import Path
 import asyncio # For async lock if needed later, though sync cache is simpler here
-from cachetools import TTLCache
+from cachetools import TTLCache, cached
 from threading import Lock
+import json # Add json import
+import re # For parsing vote_id
 
 # Import from consolidated core and db modules
 from .core import (
@@ -38,12 +40,17 @@ from .core import (
 )
 from .db import get_db_connection, Token, TokenData, User, UserCreate, UserInDB
 
-# --- In-Memory Cache for Votes --- #
+# --- In-Memory Caches --- #
 # Cache holds up to 500 members' vote history for 1 hour (3600 seconds)
-vote_cache = TTLCache(maxsize=500, ttl=3600)
-# Using a simple lock for thread-safety in sync context, though less critical with GIL
-# For async endpoints, asyncio.Lock would be better
-cache_lock = Lock()
+member_vote_cache = TTLCache(maxsize=500, ttl=3600)
+# Cache holds breakdown data for up to 2000 individual votes for 6 hours
+vote_breakdown_cache = TTLCache(maxsize=2000, ttl=21600)
+# Using simple locks for thread-safety in sync context
+member_cache_lock = Lock()
+breakdown_cache_lock = Lock() # Lock for the breakdown cache
+
+# Base path for congress data
+CONGRESS_DATA_DIR = Path(__file__).parent / "static" / "congress_data" / "congress"
 
 # --- Router Setup --- #
 # Single router for all API endpoints
@@ -448,48 +455,167 @@ def get_member_by_congress_id(congress_id: str):
         return member
     raise HTTPException(status_code=404, detail=f"Member with congress_id '{congress_id}' not found")
 
-@router.get("/members/{bioguide_id}/votes", response_model=List[Dict[str, Any]], summary="Get Member Vote History", description="Retrieves the recorded vote history for a specific member by their bioguide_id.")
+@router.get("/members/{bioguide_id}/votes", response_model=List[Dict[str, Any]], summary="Get Member Vote History", description="Retrieves the recorded vote history for a specific member by their bioguide_id, including party breakdown.")
 def get_votes_for_member(bioguide_id: str):
-    """Get vote history for a member, using an in-memory cache."""
-    # Check cache first (thread-safe)
-    with cache_lock:
-        if bioguide_id in vote_cache:
-            print(f"[Cache] HIT for votes: {bioguide_id}")
-            return vote_cache[bioguide_id]
+    """
+    Fetches member vote history, retrieves full vote data for each vote,
+    calculates party breakdown, adds it, and returns the augmented history.
+    Results (augmented history for the member) are cached.
+    """
+    # Check cache first using a manual approach due to augmentation step
+    with member_cache_lock:
+        cached_result = member_vote_cache.get(bioguide_id)
+        if cached_result:
+            # print(f"[get_votes_for_member] Cache hit for bioguide_id: {bioguide_id}") # Debug log
+            return cached_result
 
-    print(f"[Cache] MISS for votes: {bioguide_id}. Fetching from core function...")
-    # If not in cache, call the actual function
-    try:
-        # Assuming get_member_vote_history handles file reading/parsing
-        votes_data = get_member_vote_history(bioguide_id)
-        
-        # Check if data was successfully fetched before caching
-        if votes_data:
-            # Store in cache (thread-safe)
-            with cache_lock:
-                vote_cache[bioguide_id] = votes_data
-            print(f"[Cache] Stored votes for: {bioguide_id}")
-            return votes_data
+    # print(f"[get_votes_for_member] Cache miss for bioguide_id: {bioguide_id}. Fetching...") # Debug log
+    # Get the basic history (list of votes with member's position)
+    member_vote_history = get_member_vote_history(bioguide_id)
+
+    if member_vote_history is None:
+        # This can happen if the underlying function returns None (e.g., member not found)
+         raise HTTPException(status_code=404, detail=f"Vote history not found for member {bioguide_id}")
+
+    if not member_vote_history: # Handle empty list case
+        # Cache the empty list before returning
+        with member_cache_lock:
+            member_vote_cache[bioguide_id] = []
+        return []
+
+    # Augment the history with party breakdowns
+    augmented_history = []
+    print(f"[BackendVoteLoop] Augmenting {len(member_vote_history)} votes for {bioguide_id}...") # Log loop start
+    for vote in member_vote_history:
+        vote_id = vote.get('vote_id')
+        if not vote_id:
+            # print(f"[BackendVoteLoop] Warning: Skipping vote due to missing vote_id in member history for {bioguide_id}. Vote data: {vote}") # Debug log
+            vote['party_breakdown'] = {} # Add empty dict for consistency
+            augmented_history.append(vote)
+            continue
+
+        # Get full data (potentially from cache via decorator)
+        # print(f"[BackendVoteLoop] Processing vote_id: {vote_id}") # Log each vote ID
+        full_vote_data = _get_full_vote_data(vote_id)
+
+        if full_vote_data:
+            # Calculate breakdown
+            # print(f"[BackendVoteLoop] Got full_vote_data for {vote_id}. Calculating breakdown...") # Log success
+            party_breakdown = _calculate_party_breakdown(full_vote_data)
+            if not party_breakdown: # Check if breakdown calculation returned empty
+                 print(f"[BackendVoteLoop] Warning: _calculate_party_breakdown returned empty for {vote_id}. Data structure might be invalid.")
+            vote['party_breakdown'] = party_breakdown
         else:
-            # Handle case where get_member_vote_history returns None or empty list (no votes found)
-            # Don't cache this result, just return it.
-            print(f"[Cache] No vote data found by core function for: {bioguide_id}. Not caching.")
-            # Return empty list or appropriate response if votes not found
-            return [] # Or raise HTTPException(status_code=404, detail="No vote history found") if preferred
+            # Handle case where full vote data couldn't be loaded/parsed
+            print(f"[BackendVoteLoop] Warning: _get_full_vote_data failed for {vote_id}. Setting breakdown to empty dict.") # <-- MORE SPECIFIC LOGGING HERE
+            vote['party_breakdown'] = {} # Add empty dict
 
-    except FileNotFoundError:
-        # Specific error if the underlying function raises this for a missing member/data
-        print(f"[API] Vote data file not found for: {bioguide_id}")
-        raise HTTPException(status_code=404, detail=f"Vote history data not found for member {bioguide_id}")
-    except Exception as e:
-        # Catch other potential errors during data fetching/processing
-        print(f"[API] Error fetching vote history for {bioguide_id}: {e}")
-        # Log the full error for debugging
-        # logger.exception(f"Error fetching vote history for {bioguide_id}") 
-        raise HTTPException(status_code=500, detail="Internal server error processing vote history")
+        augmented_history.append(vote)
 
-# Example protected route (requires authentication) - Assuming this belongs on the router
+    # Cache the augmented result before returning
+    with member_cache_lock:
+        member_vote_cache[bioguide_id] = augmented_history
+
+    # print(f"[get_votes_for_member] Fetched and augmented {len(augmented_history)} votes for {bioguide_id}. Caching result.") # Debug log
+    return augmented_history
+
+# Removed old function filter_votes_by_type as filtering logic moved to frontend
+
 @router.get("/api/secure-data", summary="Access Secure Data", description="Example of a protected endpoint requiring authentication.", tags=["auth"]) # Added tag for consistency
 async def read_secure_data(current_user: UserInDB = Depends(get_current_user)):
     # Only accessible if get_current_user succeeds (token is valid)
-    return {"message": f"Hello {current_user.username}! This data is secure.", "user_info": current_user} 
+    return {"message": f"Hello {current_user.username}! This data is secure.", "user_info": current_user}
+
+# --- New Helper Functions for Vote Breakdown --- #
+
+@cached(vote_breakdown_cache, lock=breakdown_cache_lock)
+def _get_full_vote_data(vote_id: str) -> Optional[Dict]:
+    """
+    Loads the full data.json for a given vote_id.
+    Parses vote_id like 'h123-117.2022' or 's99-118.2023'.
+    Handles potential file not found or JSON errors.
+    Results are cached.
+    """
+    # print(f"[_get_full_vote_data] Attempting to load data for vote_id: {vote_id}") # Debug log
+    match = re.match(r"([hs])(\d+)-(\d+)\.(\d{4})", vote_id)
+    if not match:
+        print(f"Error: Could not parse vote_id format: {vote_id}")
+        return None
+
+    chamber_code, vote_num, congress_num, year = match.groups()
+    chamber = chamber_code # Keep 'h' or 's'
+
+    file_path = CONGRESS_DATA_DIR / congress_num / "votes" / year / f"{chamber}{vote_num}" / "data.json"
+
+    if not file_path.is_file():
+        # print(f"Warning: Vote data file not found for {vote_id} at path: {file_path}") # Debug log
+        # Try common alternative for session folders (e.g. year-1 if congress spans two years)
+        alt_year = str(int(year) - 1)
+        alt_file_path = CONGRESS_DATA_DIR / congress_num / "votes" / alt_year / f"{chamber}{vote_num}" / "data.json"
+        if alt_file_path.is_file():
+            file_path = alt_file_path
+            # print(f"[_get_full_vote_data] Found vote data in alternative year folder: {file_path}") # Debug log
+        else:
+            print(f"Error: Vote data file not found for {vote_id} at {file_path} or {alt_file_path}")
+            return None # File doesn't exist
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        # print(f"[_get_full_vote_data] Successfully loaded data for {vote_id}") # Debug log
+        return data
+    except json.JSONDecodeError as e:
+        print(f"Error: Failed to parse JSON for vote {vote_id} at {file_path}: {e}")
+        return None
+    except Exception as e:
+        print(f"Error: Failed to read file for vote {vote_id} at {file_path}: {e}")
+        return None
+
+def _calculate_party_breakdown(full_vote_data: Dict) -> Dict[str, Dict[str, int]]:
+    """
+    Calculates the vote breakdown by party from the full vote data.
+    Returns a dict like: {'R': {'yes': X, 'no': Y, ...}, 'D': {...}}
+    Uses party codes 'R', 'D', 'I' directly from the data.
+    """
+    breakdown = {}
+    if not full_vote_data or 'votes' not in full_vote_data:
+        return breakdown # Return empty if data is missing or invalid
+
+    # Map JSON vote keys (Yea, Nay, etc.) to internal keys (yes, no, etc.)
+    vote_key_map = {
+        "Yea": "yes",
+        "Aye": "yes", # Handle variations
+        "Yes": "yes",
+        "Nay": "no",
+        "No": "no",
+        "Present": "present",
+        "Not Voting": "not_voting"
+    }
+
+    for vote_position_key, members in full_vote_data['votes'].items():
+        internal_key = vote_key_map.get(vote_position_key)
+        if not internal_key:
+            # print(f"Warning: Unknown vote position key '{vote_position_key}' in vote data.") # Debug log
+            continue # Skip unknown vote types like 'Guilty', 'Not Guilty' for now
+
+        if not isinstance(members, list):
+            # print(f"Warning: Expected list for vote position '{vote_position_key}', got {type(members)}.\") # Debug log
+            continue # Skip if data format is unexpected
+
+        for member in members:
+            party = member.get('party')
+            if not party:
+                continue # Skip if member has no party listed
+
+            # Ensure party entry exists
+            if party not in breakdown:
+                breakdown[party] = {"yes": 0, "no": 0, "present": 0, "not_voting": 0}
+
+            # Increment the count for the specific vote position
+            breakdown[party][internal_key] = breakdown[party].get(internal_key, 0) + 1
+
+    # print(f"[_calculate_party_breakdown] Calculated breakdown: {breakdown}") # Debug log
+    return breakdown
+
+# Make sure the main app includes this router
+# Example in main.py: app.include_router(api.router, prefix="/api") 
