@@ -13,8 +13,6 @@ from pathlib import Path
 import asyncio # For async lock if needed later, though sync cache is simpler here
 from cachetools import TTLCache, cached
 from threading import Lock
-import json # Add json import
-import re # For parsing vote_id
 
 # Import from consolidated core and db modules
 from .core import (
@@ -43,11 +41,8 @@ from .db import get_db_connection, Token, TokenData, User, UserCreate, UserInDB
 # --- In-Memory Caches --- #
 # Cache holds up to 500 members' vote history for 1 hour (3600 seconds)
 member_vote_cache = TTLCache(maxsize=500, ttl=3600)
-# Cache holds breakdown data for up to 2000 individual votes for 6 hours
-vote_breakdown_cache = TTLCache(maxsize=2000, ttl=21600)
 # Using simple locks for thread-safety in sync context
 member_cache_lock = Lock()
-breakdown_cache_lock = Lock() # Lock for the breakdown cache
 
 # Base path for congress data
 CONGRESS_DATA_DIR = Path(__file__).parent / "static" / "congress_data" / "congress"
@@ -455,17 +450,15 @@ def get_member_by_congress_id(congress_id: str):
         return member
     raise HTTPException(status_code=404, detail=f"Member with congress_id '{congress_id}' not found")
 
-@router.get("/members/{bioguide_id}/votes", response_model=List[Dict[str, Any]], summary="Get Member Vote History", description="Retrieves the recorded vote history for a specific member by their bioguide_id, including party breakdown.")
+@router.get("/members/{bioguide_id}/votes", response_model=List[Dict[str, Any]], summary="Get Member Vote History", description="Retrieves the recorded vote history for a specific member by their bioguide_id.")
 def get_votes_for_member(bioguide_id: str):
     """
-    Fetches member vote history, retrieves full vote data for each vote,
-    calculates party breakdown, adds it, and returns the augmented history.
-    Results (augmented history for the member) are cached.
+    Fetches member vote history. Results are cached.
     """
-    # Check cache first using a manual approach due to augmentation step
+    # Check cache first
     with member_cache_lock:
         cached_result = member_vote_cache.get(bioguide_id)
-        if cached_result:
+        if cached_result is not None: # Check for None explicitly in case cached result is []
             # print(f"[get_votes_for_member] Cache hit for bioguide_id: {bioguide_id}") # Debug log
             return cached_result
 
@@ -477,47 +470,12 @@ def get_votes_for_member(bioguide_id: str):
         # This can happen if the underlying function returns None (e.g., member not found)
          raise HTTPException(status_code=404, detail=f"Vote history not found for member {bioguide_id}")
 
-    if not member_vote_history: # Handle empty list case
-        # Cache the empty list before returning
-        with member_cache_lock:
-            member_vote_cache[bioguide_id] = []
-        return []
-
-    # Augment the history with party breakdowns
-    augmented_history = []
-    print(f"[BackendVoteLoop] Augmenting {len(member_vote_history)} votes for {bioguide_id}...") # Log loop start
-    for vote in member_vote_history:
-        vote_id = vote.get('vote_id')
-        if not vote_id:
-            # print(f"[BackendVoteLoop] Warning: Skipping vote due to missing vote_id in member history for {bioguide_id}. Vote data: {vote}") # Debug log
-            vote['party_breakdown'] = {} # Add empty dict for consistency
-            augmented_history.append(vote)
-            continue
-
-        # Get full data (potentially from cache via decorator)
-        # print(f"[BackendVoteLoop] Processing vote_id: {vote_id}") # Log each vote ID
-        full_vote_data = _get_full_vote_data(vote_id)
-
-        if full_vote_data:
-            # Calculate breakdown
-            # print(f"[BackendVoteLoop] Got full_vote_data for {vote_id}. Calculating breakdown...") # Log success
-            party_breakdown = _calculate_party_breakdown(full_vote_data)
-            if not party_breakdown: # Check if breakdown calculation returned empty
-                 print(f"[BackendVoteLoop] Warning: _calculate_party_breakdown returned empty for {vote_id}. Data structure might be invalid.")
-            vote['party_breakdown'] = party_breakdown
-        else:
-            # Handle case where full vote data couldn't be loaded/parsed
-            print(f"[BackendVoteLoop] Warning: _get_full_vote_data failed for {vote_id}. Setting breakdown to empty dict.") # <-- MORE SPECIFIC LOGGING HERE
-            vote['party_breakdown'] = {} # Add empty dict
-
-        augmented_history.append(vote)
-
-    # Cache the augmented result before returning
+    # Cache the result before returning (even if it's an empty list)
     with member_cache_lock:
-        member_vote_cache[bioguide_id] = augmented_history
+        member_vote_cache[bioguide_id] = member_vote_history
 
-    # print(f"[get_votes_for_member] Fetched and augmented {len(augmented_history)} votes for {bioguide_id}. Caching result.") # Debug log
-    return augmented_history
+    # print(f"[get_votes_for_member] Fetched {len(member_vote_history)} votes for {bioguide_id}. Caching result.") # Debug log
+    return member_vote_history
 
 # Removed old function filter_votes_by_type as filtering logic moved to frontend
 
@@ -528,94 +486,100 @@ async def read_secure_data(current_user: UserInDB = Depends(get_current_user)):
 
 # --- New Helper Functions for Vote Breakdown --- #
 
-@cached(vote_breakdown_cache, lock=breakdown_cache_lock)
-def _get_full_vote_data(vote_id: str) -> Optional[Dict]:
-    """
-    Loads the full data.json for a given vote_id.
-    Parses vote_id like 'h123-117.2022' or 's99-118.2023'.
-    Handles potential file not found or JSON errors.
-    Results are cached.
-    """
-    # print(f"[_get_full_vote_data] Attempting to load data for vote_id: {vote_id}") # Debug log
-    match = re.match(r"([hs])(\d+)-(\d+)\.(\d{4})", vote_id)
-    if not match:
-        print(f"Error: Could not parse vote_id format: {vote_id}")
-        return None
-
-    chamber_code, vote_num, congress_num, year = match.groups()
-    chamber = chamber_code # Keep 'h' or 's'
-
-    file_path = CONGRESS_DATA_DIR / congress_num / "votes" / year / f"{chamber}{vote_num}" / "data.json"
-
-    if not file_path.is_file():
-        # print(f"Warning: Vote data file not found for {vote_id} at path: {file_path}") # Debug log
-        # Try common alternative for session folders (e.g. year-1 if congress spans two years)
-        alt_year = str(int(year) - 1)
-        alt_file_path = CONGRESS_DATA_DIR / congress_num / "votes" / alt_year / f"{chamber}{vote_num}" / "data.json"
-        if alt_file_path.is_file():
-            file_path = alt_file_path
-            # print(f"[_get_full_vote_data] Found vote data in alternative year folder: {file_path}") # Debug log
-        else:
-            print(f"Error: Vote data file not found for {vote_id} at {file_path} or {alt_file_path}")
-            return None # File doesn't exist
-
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        # print(f"[_get_full_vote_data] Successfully loaded data for {vote_id}") # Debug log
-        return data
-    except json.JSONDecodeError as e:
-        print(f"Error: Failed to parse JSON for vote {vote_id} at {file_path}: {e}")
-        return None
-    except Exception as e:
-        print(f"Error: Failed to read file for vote {vote_id} at {file_path}: {e}")
-        return None
-
-def _calculate_party_breakdown(full_vote_data: Dict) -> Dict[str, Dict[str, int]]:
-    """
-    Calculates the vote breakdown by party from the full vote data.
-    Returns a dict like: {'R': {'yes': X, 'no': Y, ...}, 'D': {...}}
-    Uses party codes 'R', 'D', 'I' directly from the data.
-    """
-    breakdown = {}
-    if not full_vote_data or 'votes' not in full_vote_data:
-        return breakdown # Return empty if data is missing or invalid
-
-    # Map JSON vote keys (Yea, Nay, etc.) to internal keys (yes, no, etc.)
-    vote_key_map = {
-        "Yea": "yes",
-        "Aye": "yes", # Handle variations
-        "Yes": "yes",
-        "Nay": "no",
-        "No": "no",
-        "Present": "present",
-        "Not Voting": "not_voting"
-    }
-
-    for vote_position_key, members in full_vote_data['votes'].items():
-        internal_key = vote_key_map.get(vote_position_key)
-        if not internal_key:
-            # print(f"Warning: Unknown vote position key '{vote_position_key}' in vote data.") # Debug log
-            continue # Skip unknown vote types like 'Guilty', 'Not Guilty' for now
-
-        if not isinstance(members, list):
-            # print(f"Warning: Expected list for vote position '{vote_position_key}', got {type(members)}.\") # Debug log
-            continue # Skip if data format is unexpected
-
-        for member in members:
-            party = member.get('party')
-            if not party:
-                continue # Skip if member has no party listed
-
-            # Ensure party entry exists
-            if party not in breakdown:
-                breakdown[party] = {"yes": 0, "no": 0, "present": 0, "not_voting": 0}
-
-            # Increment the count for the specific vote position
-            breakdown[party][internal_key] = breakdown[party].get(internal_key, 0) + 1
-
-    # print(f"[_calculate_party_breakdown] Calculated breakdown: {breakdown}") # Debug log
-    return breakdown
+# @cached(vote_breakdown_cache, lock=breakdown_cache_lock)
+# def _get_full_vote_data(vote_id: str) -> Optional[Dict]:
+#     """
+#     Loads the full data.json for a given vote_id.
+#     Parses vote_id like 'h123-117.2022' or 's99-118.2023'.
+#     Handles potential file not found or JSON errors.
+#     Results are cached.
+#     """
+#     # print(f"[_get_full_vote_data] Attempting to load data for vote_id: {vote_id}") # Debug log
+#     match = re.match(r"([hs])(\d+)-(\d+)\.(\d{4})", vote_id)
+#     if not match:
+#         print(f"Error: Could not parse vote_id format: {vote_id}")
+#         return None
+# 
+#     chamber_code, vote_num, congress_num, year = match.groups()
+#     chamber = chamber_code # Keep 'h' or 's'
+# 
+#     file_path = CONGRESS_DATA_DIR / congress_num / "votes" / year / f"{chamber}{vote_num}" / "data.json"
+# 
+#     if not file_path.is_file():
+#         # print(f"Warning: Vote data file not found for {vote_id} at path: {file_path}") # Debug log
+#         # Try common alternative for session folders (e.g. year-1 if congress spans two years)
+#         alt_year = str(int(year) - 1)
+#         alt_file_path = CONGRESS_DATA_DIR / congress_num / "votes" / alt_year / f"{chamber}{vote_num}" / "data.json"
+#         if alt_file_path.is_file():
+#             file_path = alt_file_path
+#             # print(f"[_get_full_vote_data] Found vote data in alternative year folder: {file_path}") # Debug log
+#         else:
+#             print(f"Error: Vote data file not found for {vote_id} at {file_path} or {alt_file_path}")
+#             return None # File doesn't exist
+# 
+#     try:
+#         with open(file_path, 'r', encoding='utf-8') as f:
+#             data = json.load(f)
+#         # print(f"[_get_full_vote_data] Successfully loaded data for {vote_id}") # Debug log
+#         return data
+#     except json.JSONDecodeError as e:
+#         print(f"Error: Failed to parse JSON for vote {vote_id} at {file_path}: {e}")
+#         return None
+#     except Exception as e:
+#         print(f"Error: Failed to read file for vote {vote_id} at {file_path}: {e}")
+#         return None
+# 
+# def _calculate_party_breakdown(full_vote_data: Dict) -> Dict[str, Dict[str, int]]:
+#     """
+#     Calculates the vote breakdown by party from the full vote data.
+#     Returns a dict like: {'R': {'yes': X, 'no': Y, ...}, 'D': {...}}
+#     Uses party codes 'R', 'D', 'I' directly from the data.
+#     """
+#     breakdown = {}
+#     if not full_vote_data or 'votes' not in full_vote_data:
+#         return breakdown # Return empty if data is missing or invalid
+# 
+#     # Map JSON vote keys (Yea, Nay, etc.) to internal keys (yes, no, etc.)
+#     vote_key_map = {
+#         "Yea": "yes",
+#         "Aye": "yes", # Handle variations
+#         "Yes": "yes",
+#         "Nay": "no",
+#         "No": "no",
+#         "Present": "present",
+#         "Not Voting": "not_voting"
+#     }
+# 
+#     for vote_position_key, members in full_vote_data['votes'].items():
+#         internal_key = vote_key_map.get(vote_position_key)
+#         if not internal_key:
+#             # print(f"Warning: Unknown vote position key '{vote_position_key}' in vote data.") # Debug log
+#             continue # Skip unknown vote types like 'Guilty', 'Not Guilty' for now
+# 
+#         if not isinstance(members, list):
+#             # print(f"Warning: Expected list for vote position '{vote_position_key}', got {type(members)}.") # Debug log
+#             continue # Skip if data format is unexpected
+# 
+#         for member in members:
+#             # Add check: Ensure member is a dictionary before accessing .get()
+#             if not isinstance(member, dict):
+#                 # Optionally log this occurrence for debugging data inconsistencies
+#                 # print(f"Warning: Expected dict for member, got {type(member)}: {member}") 
+#                 continue
+# 
+#             party = member.get('party')
+#             if not party:
+#                 continue # Skip if member has no party listed
+# 
+#             # Ensure party entry exists
+#             if party not in breakdown:
+#                 breakdown[party] = {"yes": 0, "no": 0, "present": 0, "not_voting": 0}
+# 
+#             # Increment the count for the specific vote position
+#             breakdown[party][internal_key] = breakdown[party].get(internal_key, 0) + 1
+# 
+#     # print(f"[_calculate_party_breakdown] Calculated breakdown: {breakdown}") # Debug log
+#     return breakdown
 
 # Make sure the main app includes this router
 # Example in main.py: app.include_router(api.router, prefix="/api") 
