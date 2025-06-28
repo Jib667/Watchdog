@@ -1,6 +1,7 @@
 # Watchdog - Congressional Monitoring Platform
 
 Watchdog is a web application designed to provide citizens with accessible and performant information about the U.S. Congress. It allows users to explore data on current members of the House and Senate, their committee assignments, and detailed vote histories.
+![Screenshot 2025-06-28 at 2 51 07 PM](https://github.com/user-attachments/assets/f1251822-e156-42fa-a956-6986bfa44ddf)
 
 ## Project Structure
 
